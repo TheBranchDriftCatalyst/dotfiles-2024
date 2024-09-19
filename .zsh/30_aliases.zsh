@@ -364,13 +364,13 @@ function fs() {
 	fi;
 }
 
-# Use Git’s colored diff when available
-hash git &>/dev/null;
-if [ $? -eq 0 ]; then
-	function diff() {
-		git diff --no-index --color-words "$@";
-	}
-fi;
+# # Use Git’s colored diff when available
+# hash git &>/dev/null;
+# if [ $? -eq 0 ]; then
+# 	function diff() {
+# 		git diff --no-index --color-words "$@";
+# 	}
+# fi;
 
 # Create a data URL from a file
 function dataurl() {
@@ -466,15 +466,15 @@ function getcertnames() {
 	fi;
 }
 
-# `s` with no arguments opens the current directory in Sublime Text, otherwise
-# opens the given location
-function s() {
-	if [ $# -eq 0 ]; then
-		subl .;
-	else
-		subl "$@";
-	fi;
-}
+# # `s` with no arguments opens the current directory in Sublime Text, otherwise
+# # opens the given location
+# function s() {
+# 	if [ $# -eq 0 ]; then
+# 		subl .;
+# 	else
+# 		subl "$@";
+# 	fi;
+# }
 
 # `v` with no arguments opens the current directory in Vim, otherwise opens the
 # given location

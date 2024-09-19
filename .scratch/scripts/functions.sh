@@ -12,7 +12,6 @@ function work_on() {
         echo "Opening $workspace_file..."
         code "$workspace_file"
     else
-        echo "No workspace selected."
+        echo "No workspacem selected."
     fi
 }
-
