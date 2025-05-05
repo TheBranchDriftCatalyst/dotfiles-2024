@@ -1,0 +1,18 @@
+protecht() {
+  # The first argument determines the subcommand
+  local subcommand=$1
+  shift # Remove the subcommand from arguments
+
+  # Forward everything to `pdm run python -m protecht`
+  pdm run python -m protecht "$subcommand" "$@"
+}
+
+#  allows running things like within PDM concisely
+# protecht migrate
+
+protecht_restart() {
+  docker compose down
+  docker system prune --volumes
+  dnuke
+  docker compose -f docker-compose.yml -f ./docker/docker-compose.rabbitmq.yml -f ./docker/docker-compose.ports.yml up
+}

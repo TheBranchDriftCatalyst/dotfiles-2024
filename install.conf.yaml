@@ -7,6 +7,12 @@
     link:
       create: true # Auto-create directories if missing
       relink: true # Relink existing symlinks
+- git:
+    ~/catalyst-development/@dotfiles:
+      # url: https://<GITHUB_TOKEN>@github.com/username/private-repo.git
+      # description: Private repository
+    ~/catalyst-development/@machines:
+    ~/catalyst-development/@secrets:
 - link:
     ~/:
       glob: true
