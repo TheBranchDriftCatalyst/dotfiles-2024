@@ -7,11 +7,11 @@
     link:
       create: true # Auto-create directories if missing
       relink: true # Relink existing symlinks
-
 - link:
     ~/:
       glob: true
       path: './dotfiles/.*'
+    ~/.sops.yaml: '../@secrets/.sops.yaml'
 - link:
     ~/:
       glob: true
