@@ -3,6 +3,3 @@
 	url = https://github.com/anishathalye/dotbot.git
 	ignore = dirty
 	
-[submodule "etc/plugins/dotbot-git"]
-	path = etc/plugins/dotbot-git
-	url = git@github.com:DrDynamic/dotbot-git.git
