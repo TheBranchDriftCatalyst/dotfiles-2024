@@ -1,73 +1,168 @@
-# ANSI
-RESET="\e[0m"
-GREEN="\e[32m"
-RED="\e[31m"
-BOLD="\e[1m"
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Use a temp file to accumulate output — no arrays, no traps
-# This is a workaround for the fact that direnv is loading
-# snapshots of the env after this is run, and applying it
-# to the parent shell env.  So we cant pass 'channel' like
-# objects.  This is needed so direnv can unload a env
-__env_table_log_file="/tmp/direnv_env_table_$$.log"
+DEBUG_ENV_UTILS=${DEBUG_ENV_UTILS:-0}
+ENABLE_COLORS=${ENABLE_COLORS:-1}
+MEASURE_ENV_UTILS_PERF=${MEASURE_ENV_UTILS_PERF:-0}
 
-echo "Catalyst direnv export_utils loaded"
-echo "Temp env table log file: $__env_table_log_file"
+if ! JSON_TOOL=$(command -v jq); then
+  echo "jq is required" >&2
+  exit 1
+fi
+
+# ANSI colors
+if [[ "$ENABLE_COLORS" == "1" ]]; then
+  RESET="\033[0m"; GREEN="\033[32m"; RED="\033[31m"; BOLD="\033[1m"; YELLOW="\033[33m"
+else
+  RESET=""; GREEN=""; RED=""; BOLD=""; YELLOW=""
+fi
+
+debug_log() {
+  if [[ "$DEBUG_ENV_UTILS" == "1" ]]; then
+    printf "%b\n" "${BOLD}[debug]${RESET} $*" 1>&2
+  fi
+}
+
+measure() {
+  local label=$1
+  shift
+
+  if [[ "${MEASURE_ENV_UTILS_PERF:-0}" == "1" ]]; then
+    local start end duration
+
+    start=$(perl -MTime::HiRes=time -e 'printf("%.0f\n", time * 1000)')
+    "$@"
+    local result=$?
+    end=$(perl -MTime::HiRes=time -e 'printf("%.0f\n", time * 1000)')
+    duration=$((end - start))
+
+    printf "%b\n" "${YELLOW}[perf]${RESET} ${label}: ${duration}ms" >&2
+    return $result
+  else
+    "$@"
+  fi
+}
+
+
+__env_json_file="/tmp/direnv_env_table_$$.json"
+debug_log "Catalyst direnv export_utils loaded"
+debug_log "Temp JSON env file: $__env_json_file"
 
 begin_env() {
-  echo -e "ENV_VAR\tVALUE\tSTATUS" > "$__env_table_log_file"
+  debug_log "Initializing JSON env table"
+  printf '[]' > "$__env_json_file"
 }
 
 begin_env
 
-export_var() {
-  local name=$1 value=$2
-
-
-  # if [[ ! "$name" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
-  #   log_error "Invalid variable name: $name"
-  #   echo -e "$name\t$value\tINVALID NAME" >> "$__env_table_log_file"
-  #   return 1
-  # fi
-
-  export "$name=$value"
-
-  # Check if the value contains "prod" or "production"
-  if [[ "$value" =~ prod|production ]]; then
-    # SHow a small little flag if it looks like a prod value
-    echo -e "$name\t$value\t⚠️  PROD" >> "$__env_table_log_file"
-  elif [[ -n $(printenv "$name") ]]; then
-    # Normal success case
-    echo -e "$name\t$value\t${GREEN}✅${RESET}" >> "$__env_table_log_file"
-  else
-    # Failure case
-    echo -e "$name\t$value\t${RED}❌${RESET}" >> "$__env_table_log_file"
-  fi
+write_json() {
+  local jq_filter=$1
+  shift
+  measure "write_json" "$JSON_TOOL" "$jq_filter" "$@" > "$__env_json_file.tmp" \
+    && mv "$__env_json_file.tmp" "$__env_json_file"
 }
 
-export_var_dir() {
-  local name=$1 dir=$2
+export_var() {
+  local name=$1 value=$2 origin=${3:-envrc}
+  debug_log "Exporting var: $name=$value (origin=$origin)"
+  export "$name=$value"
+
+  local status="✅"
+  [[ "$value" =~ prod|production ]] && status="⚠️ PROD"
+
+  measure "export_var.mark:$name" write_json --arg nm "$name" \
+    'map(if .name == $nm then . + {overwritten: true} else . end)' "$__env_json_file"
+
+  measure "export_var.add:$name" write_json -c --arg orig "$origin" --arg nm "$name" --arg val "$value" --arg st "$status" \
+    '. += [{origin: $orig, name: $nm, value: $val, status: $st, overwritten: false}]' "$__env_json_file"
+}
+
+export_dir() {
+  local name=$1 dir=$2 origin=${3:-envrc}
+  debug_log "Checking directory: $dir"
+
   if [[ ! -d "$dir" ]]; then
-    echo -e "$name\t$dir\t${RED}❌ MISSING${RESET}" >> "$__env_table_log_file"
+    export_var "$name" "$dir" "$origin"
+    measure "export_dir.status:$name" write_json -c --arg nm "$name" \
+      '(.[] | select(.name == $nm)) |= . + {status: "❌ MISSING"}' "$__env_json_file"
     return 1
   fi
 
-  export_var "$name" "$dir"
+  export_var "$name" "$dir" "$origin"
 }
-
-export_dir = export_var_dir
 
 end_env() {
-  # Maybe we also sort the table???
-  # Sort by the first column (name)
-  sort -k1,1 "$__env_table_log_file" > "$__env_table_log_file.sorted"
+  debug_log "Finalizing env table from JSON"
   echo
-  column -t -s $'\t' "$__env_table_log_file.sorted"
+
+  # Step 1: Build clean tabular output with overwrite flag
+  local rows
+  rows=$(
+    "$JSON_TOOL" -r '
+      sort_by(.name, .overwritten)[] |
+      [.status, .origin, .name, .value, (if .overwritten then "1" else "0" end)] |
+      @tsv
+    ' "$__env_json_file"
+  )
+
+  # Step 2: Pipe to column and post-process
+  echo "$rows" | column -t -s $'\t' | while IFS= read -r line; do
+    if [[ "$line" =~ [[:space:]]1$ ]]; then
+      # Remove the '1' marker and dim the full line
+      printf "\033[2m%s\033[0m\n" "${line% 1}"
+    else
+      # Remove the '0' marker and print normally
+      echo "${line% 0}"
+    fi
+  done
+
+  rm -f "$__env_json_file"
   echo
-  rm -f "$__env_table_log_file.sorted"
 }
 
-# Also trap doesnt work here, because this is a subshell
-# and the trap will not be inherited by the parent shell
-# So we need to call this manually
-# trap 'end_env' EXIT
+# -----------------------------------------------------------------------------
+# Function: dotenv_if_exists
+#
+# Description:
+#   Checks for the presence of a dotenv file and, if found, exports its defined
+#   environment variables into the current shell session.
+#
+# Usage:
+#   dotenv_if_exists [path_to_dotenv]
+#
+# Parameters:
+#   path_to_dotenv (optional):
+#     The file path to the dotenv file. If not provided, a default ".env" file
+#     in the current directory is assumed.
+#
+# Returns:
+#   The function exports environment variables if the specified dotenv file exists.
+# -----------------------------------------------------------------------------
+dotenv_if_exists() {
+  local path="${1:-$PWD/.env}"
+  [[ -d "$path" ]] && path="$path/.env"
+
+  debug_log "Looking for dotenv at: $path"
+  watch_file "$path"
+  [[ -f "$path" ]] || return 0
+
+  local exports
+  exports="$("$direnv" dotenv bash "$@")" || return 1
+
+  local IFS=';'
+  for segment in $exports; do
+    segment="${segment#"${segment%%[![:space:]]*}"}"
+    segment="${segment%"${segment##*[![:space:]]}"}"
+    [[ $segment == export* ]] && segment=${segment#export }
+
+    if [[ $segment =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+      local name="${BASH_REMATCH[1]}"
+      local value="${BASH_REMATCH[2]}"
+      [[ $value =~ ^\$\'(.*)\'$ ]] && value="${BASH_REMATCH[1]}"
+      export_var "$name" "$value" "dotenv"
+    fi
+  done
+  unset IFS
+
+  eval "$exports"
+}

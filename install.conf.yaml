@@ -1,18 +1,4 @@
-# TODO: spruve this up a bit
-# https://github.com/anishathalye/dotbot
-# https://github.com/anishathalye/dotbot/wiki/Plugins
-# https://github.com/elogiclab/dotbot-sops
-# https://github.com/j1r1k/dotbot-sync
-- defaults:
-    link:
-      create: true # Auto-create directories if missing
-      relink: true # Relink existing symlinks
-- link:
-    ~/:
-      glob: true
-      path: './dotfiles/.*'
-    ~/.sops.yaml: '../@secrets/.sops.yaml'
-- link:
-    ~/:
-      glob: true
-      path: './dotfiles/*'
+# Auto-generated install.conf.yaml
+- include: ./profiles/base.yaml
+- include: ./profiles/catalyst-sops.yaml
+- include: ./profiles/catalyst-cli.yaml

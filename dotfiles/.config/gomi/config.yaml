@@ -1,53 +1,61 @@
 core:
-  # trash_dir: ~/.gomi
-    # Path to store trashed files. Can be changed to another location.
-    # Supports environment variable expansion like $HOME or ~.
-    # If empty, defaults to ~/.gomi.
+  trash:
+    strategy: auto
+    home_fallback: true
+    # gomi_dir: /Users/hdaniels/.gomi
   restore:
-    confirm: false # If true, prompts for confirmation before restoring (yes/no)
-    verbose: true # If true, displays detailed restoration information
-
+    confirm: true
+    verbose: true
+  permanent_delete:
+    enable: false
+  trash_dir: ""
 ui:
-  density: compact # or compact
+  density: compact # spacious
+  # style:
+  #   list_view:
+  #     indent_on_select: true
+  #     cursor: '#AD58B4'
+  #     selected: '#5FB458'
+  #   detail_view:
+  #     border: '#EEEEDD'
+  #     info_pane:
+  #       deleted_from:
+  #         fg: '#EEEEEE'
+  #         bg: '#1C1C1C'
+  #       deleted_at:
+  #         fg: '#EEEEEE'
+  #         bg: '#1C1C1C'
+  #     preview_pane:
+  #       border: '#3C3C3C'
+  #       size:
+  #         fg: '#EEEEDD'
+  #         bg: '#3C3C3C'
+  #       scroll:
+  #         fg: '#EEEEDD'
+  #         bg: '#3C3C3C'
+  #   deletion_dialog: '#FF007F'
+  exit_message: "later alligator!"
   preview:
     syntax_highlight: true
+    directory_command: ls -GF -1 -A --color=always
+    # directory_command: ls -F -A --color=always
     colorscheme: dracula # Available themes: https://xyproto.github.io/splash/docs/index.html
-    directory_command: ls -F -A --color=always
-    # style:
-    #   list_view:
-    #     cursor: "#AD58B4" # purple
-    #     selected: "#5FB458" # green
-    #     indent_on_select: false
-    # detail_view:
-    #   border: "#FFFFFF"
-    #   info_pane:
-    #     deleted_from:
-    #       fg: "#EEEEEE"
-    #       bg: "#1C1C1C"
-    #     deleted_at:
-    #       fg: "#EEEEEE"
-    #       bg: "#1C1C1C"
-    #   preview_pane:
-    #     border: "#3C3C3C"
-    #     size:
-    #       fg: "#EEEEDD"
-    #       bg: "#3C3C3C"
-    #     scroll:
-    #       fg: "#EEEEDD"
-    #       bg: "#3C3C3C"
-  exit_message: bye! # Customizable exit message
-  paginator_type: dots # or arabic
-
+  paginator_type: dots
 history:
   include:
-    within_days: 100 # Only show files deleted in the last 100 days
+    within_days: 365
   exclude:
     files:
-    - .DS_Store # Exclude .DS_Store files
-    # patterns:
-    # - "^go\\..*" # Exclude files starting with "go."
+    - .DS_Store
+    patterns: []
     globs:
     - "*cache*"
     size:
-      min: 0KB # Exclude empty files
-      max: 10GB # Exclude files larger than 10GB
+      min: 0KB
+      max: 20GB
+logging:
+  enabled: true
+  level: debug
+  rotation:
+    max_size: 10MB
+    max_files: 3

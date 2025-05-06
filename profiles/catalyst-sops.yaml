@@ -1,0 +1,7 @@
+- git:
+    "../@secrets":
+      descriptions: catalyst secrets repository
+      url: https://github.com/TheBranchDriftCatalyst/secrets.git
+      branch: main
+- link:
+    ~/.sops.yaml: '/Users/hdaniels/catalyst-devspace/catalyst/@secrets/.sops.yaml'

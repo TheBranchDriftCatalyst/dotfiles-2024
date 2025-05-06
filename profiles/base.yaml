@@ -1,0 +1,16 @@
+# https://github.com/anishathalye/dotbot
+- defaults:
+    link:
+      create: true # Auto-create directories if missing
+      relink: true # Relink existing symlinks
+      verbose: true # Print verbose output
+
+- link:
+    ~/:
+      glob: true
+      path: './dotfiles/.*'
+
+- link:
+    ~/:
+      glob: true
+      path: './dotfiles/*'

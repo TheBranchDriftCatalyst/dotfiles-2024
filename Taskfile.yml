@@ -1,29 +1,56 @@
 version: '3'
 # Set the default task to help (mimicking the Makefile default goal)
-default: help
-
 tasks:
 
-  setup:
+  dotbot:setup:
     desc: "Initialize dotbot submodule"
     cmds:
     - git submodule update --init --recursive
 
+  select-profiles:
+    desc: "Select profiles to install"
+    interactive: true
+    sources: [ './profiles/*.yaml' ]
+    generates: [ 'install.conf.yaml' ]
+    cmds:
+    # Check for fuzyf otherwise use default
+    - ./etc/scripts/select_profiles.sh
+    # cmds:
+    # - echo "Select profiles to install:"
+    # - echo "1. base"
+    # - echo "2. catalyst-sops"
+    # - echo "3. all"
+    # - read -p "Enter your choice (1/2/3): " choice
+    # - |
+    #   case $choice in
+    #     1) echo "base" > .selected_profiles ;;
+    #     2) echo "catalyst-sops" > .selected_profiles ;;
+    #     3) echo "all" > .selected_profiles ;;
+    #     *) echo "Invalid choice. Exiting." && exit 1 ;;
+    #   esac
+
   install:
+    deps:
+    - dotbot:setup
+    - select-profiles
     desc: "Install dotfiles using dotbot"
     cmds:
     - ./install
 
-  update-submodules:
-    desc: "Update Dotbot to latest version"
+  clean:
+    desc: "Remove the dot file symlinks"
+    prompt: "are you sure you want to remove the dead symlinks in your ~ ?!"
+    silent: false
     cmds:
-    - git submodule update --remote dotbot
+    - "echo 'Remove dot files in your home directory...'"
+    - "gfind ~ -maxdepth 1 -xtype l -delete -print"
+    - "gfind ~/bin -maxdepth 1 -xtype l -delete -print"
 
-  sync:
-    desc: "Sync repo and reinstall dotfiles"
+  brew:dump:
+    desc: "Dump brew packages to Brewfile"
     cmds:
-    - git pull origin main
-    - task: install
+    - brew bundle dump --force --file=./Brewfile
+  # Old Stuff Below Still to be fully ported
   # all:
   #   desc: "Run brew, install, asdf, and afx tasks"
   #   deps:
@@ -55,34 +82,3 @@ tasks:
   #   - sh ./etc/scripts/brew.sh
   #   - brew bundle
   #   - echo 'Done. For saving your brew packages added newly, run "brew bundle dump".'
-
-  # list:
-  #   desc: "Show dot files in this repo"
-  #   cmds:
-  #   - |
-  #     for file in $(echo .??* bin); do
-  #       if [[ ! "$file" =~ ^(\.DS_Store|\.git|\.gitmodules|\.travis\.yml|\.vscode|\.scratch)$ ]]; then
-  #         /bin/ls -dF "$file"
-  #       fi
-  #     done
-
-  # install:
-  #   desc: "Create symlink to home directory"
-  #   cmds:
-  #   - echo 'Copyright (c) 2013-2015 BABAROT All Rights Reserved.'
-  #   - echo '==> Start to link dotfiles to home directory.'
-  #   - echo ''
-  #   - |
-  #     for file in $(echo .??* bin); do
-  #       if [[ ! "$file" =~ ^(\.DS_Store|\.git|\.gitmodules|\.travis\.yml|\.vscode|\.scratch)$ ]]; then
-  #         ln -sfnv "$(pwd)/$file" "$HOME/$file"
-  #       fi
-  #     done
-
-  # clean:
-  #   desc: "Remove the dot file symlinks"
-  #   cmds:
-  #   - echo 'Remove dot files in your home directory...'
-  #   - |
-  #     for file in $(echo .??* bin); do
-  #       if [[ ! "$file" =~ ^(\.DS_Store|\.git|\.gitmodules_

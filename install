@@ -1,17 +1,36 @@
 #!/usr/bin/env bash
-
-# From etc/%40dotbot/tools/git-submodule/install
-
-set -e
+set -euo pipefail
 
 CONFIG="install.conf.yaml"
 DOTBOT_DIR="etc/@dotbot"
-
 DOTBOT_BIN="bin/dotbot"
 BASEDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGINS_DIR="${BASEDIR}/etc/plugins"
 
 cd "${BASEDIR}"
-git -C "${DOTBOT_DIR}" submodule sync --quiet --recursive
-git submodule update --init --recursive "${DOTBOT_DIR}"
 
-"${BASEDIR}/${DOTBOT_DIR}/${DOTBOT_BIN}" -d "${BASEDIR}" -c "${CONFIG}" "${@}"
+# Check if the install.conf.yaml exists and if not 
+# call select_profiles.sh to creat it
+
+# init/update submodules
+git submodule update --init --recursive
+
+# Multiline command construction
+cmd=(
+  "${BASEDIR}/${DOTBOT_DIR}/${DOTBOT_BIN}"
+  # plugins should have a single py file in them
+  --plugin-dir  "${PLUGINS_DIR}/*"
+  -d            "${BASEDIR}"
+  -c            "${CONFIG}"
+  "$@"
+)
+
+# Log the exact command being run (safely quoted)
+printf 'Executing:'
+for arg in "${cmd[@]}"; do
+  printf ' %q' "${arg}"
+done
+printf '\n'
+
+# Execute it
+"${cmd[@]}"
