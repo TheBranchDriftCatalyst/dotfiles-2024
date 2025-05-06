@@ -9,7 +9,7 @@
       "https://taskfile.dev/schema.json": [
         "**/Taskfile.**.yml",
         "**/**.Taskfile.yml",
-        "**/Taskfile.yml",
+        "**/Taskfile.yml"
       ]
     },
     "python.defaultInterpreterPath": "/Users/panda/.local/share/mise/installs/python/3.12.6/bin/python",
@@ -20,5 +20,4 @@
     "go.alternateTools": {
       "go": "/Users/panda/.local/share/mise/shims/go"
     }
-    
 }

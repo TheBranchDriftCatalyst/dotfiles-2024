@@ -278,22 +278,22 @@ github:
         alias -g JQ='| jq -C .'
         alias -g JL='| jq -C . | less -R -X'
       fi
-- name: neovim/neovim
-  description: Vim-fork focused on extensibility and usability
-  owner: neovim
-  repo: neovim
-  release:
-    name: nvim
-    # tag: v0.9.0
-  command:
-    env:
-      EDITOR: nvim
-    alias:
-      vim: nvim
-      vi: command vim
-    link:
-    - from: '**/bin/nvim'
-      to: nvim
+# - name: neovim/neovim
+#   description: Vim-fork focused on extensibility and usability
+#   owner: neovim
+#   repo: neovim
+#   release:
+#     name: nvim
+#     # tag: v0.9.0
+#   command:
+#     env:
+#       EDITOR: nvim
+#     alias:
+#       vim: nvim
+#       vi: command vim
+#     link:
+#     - from: '**/bin/nvim'
+#       to: nvim
 - name: babarot/changed-objects
   description: Get changed objects in Git commit
   owner: babarot
