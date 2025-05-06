@@ -17,15 +17,16 @@ class Include(dotbot.Plugin):
 
     def handle(self, directive, data):
         if not self.can_handle(directive):
-            raise ValueError('%s cannot handle directive %s' % (self.__name__, directive))
+            raise ValueError('%s cannot handle directive %s' % (self.__name__, directive)) # noqa
 
         # Error handle?
         filename = data if isinstance(data, str) else data.get('path')
-        tasks = read_config(filename)
+        tasks = read_config([filename])
 
         defaults = self._context.defaults().get(self._directive, {})
         isolated_default = defaults.get('isolated', False)
-        isolated = data.get('isolated', isolated_default) if isinstance(data, dict) else isolated_default
+        isolated = data.get('isolated', isolated_default) if isinstance(
+            data, dict) else isolated_default
 
         self._dispatcher = self._create_dispatcher(isolated)
 
@@ -33,9 +34,9 @@ class Include(dotbot.Plugin):
 
     def _create_dispatcher(self, isolated):
         dispatcher = Dispatcher(self._context.base_directory(),
-                            only=self._context.options().only,
-                            skip=self._context.options().skip,
-                            options=self._context.options())
+                                only=self._context.options().only,
+                                skip=self._context.options().skip,
+                                options=self._context.options())
         if not isolated:
             # ugly hack...
             dispatcher._context = self._context
@@ -45,5 +46,5 @@ class Include(dotbot.Plugin):
 
     def _execute_nested(self, dispatcher, data):
         # if the data is a dictionary, wrap it in a list
-        data = data if type(data) is list else [ data ]
+        data = data if type(data) is list else [data]
         return dispatcher.dispatch(data)

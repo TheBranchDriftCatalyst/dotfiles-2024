@@ -7,7 +7,6 @@
       descriptions: catalyst secrets repository
       url: https://github.com/TheBranchDriftCatalyst/cli-tools.git
       branch: main
-
 - link:
     ~/bin/:
       glob: true
