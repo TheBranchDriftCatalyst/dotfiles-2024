@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEBUG_ENV_UTILS=${DEBUG_ENV_UTILS:-1}
+DEBUG_ENV_UTILS=${DEBUG_ENV_UTILS:-0}
 ENABLE_COLORS=${ENABLE_COLORS:-1}
-MEASURE_ENV_UTILS_PERF=${MEASURE_ENV_UTILS_PERF:-1}
+MEASURE_ENV_UTILS_PERF=${MEASURE_ENV_UTILS_PERF:-0}
 
 if ! JSON_TOOL=$(command -v jq); then
   echo "jq is required" >&2
@@ -116,9 +116,28 @@ end_env() {
     fi
   done
 
+  rm -f "$__env_json_file"
   echo
 }
 
+# -----------------------------------------------------------------------------
+# Function: dotenv_if_exists
+#
+# Description:
+#   Checks for the presence of a dotenv file and, if found, exports its defined
+#   environment variables into the current shell session.
+#
+# Usage:
+#   dotenv_if_exists [path_to_dotenv]
+#
+# Parameters:
+#   path_to_dotenv (optional):
+#     The file path to the dotenv file. If not provided, a default ".env" file
+#     in the current directory is assumed.
+#
+# Returns:
+#   The function exports environment variables if the specified dotenv file exists.
+# -----------------------------------------------------------------------------
 dotenv_if_exists() {
   local path="${1:-$PWD/.env}"
   [[ -d "$path" ]] && path="$path/.env"

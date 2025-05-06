@@ -11,4 +11,4 @@
 - link:
     ~/bin/:
       glob: true
-      path: '../@cli-tools/bin/*'
+      path: '~/catalyst-devspace/catalyst/@cli-tools/bin/*'
