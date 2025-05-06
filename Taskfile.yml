@@ -10,6 +10,7 @@ tasks:
   select-profiles:
     desc: "Select profiles to install"
     interactive: true
+    sources: [ './profiles/*.yaml' ]
     generates: [ 'install.conf.yaml' ]
     cmds:
     # Check for fuzyf otherwise use default
@@ -43,6 +44,12 @@ tasks:
     cmds:
     - "echo 'Remove dot files in your home directory...'"
     - "gfind ~ -maxdepth 1 -xtype l -delete -print"
+    - "gfind ~/bin -maxdepth 1 -xtype l -delete -print"
+
+  brew:dump:
+    desc: "Dump brew packages to Brewfile"
+    cmds:
+    - brew bundle dump --force --file=./Brewfile
   # Old Stuff Below Still to be fully ported
   # all:
   #   desc: "Run brew, install, asdf, and afx tasks"
