@@ -1,0 +1,14 @@
+- git:
+    "../@machines":
+      descriptions: catalyst machines repository
+      url: https://github.com/TheBranchDriftCatalyst/machines.git
+      branch: main
+    "../@cli-tools":
+      descriptions: catalyst secrets repository
+      url: https://github.com/TheBranchDriftCatalyst/cli-tools.git
+      branch: main
+
+- link:
+    ~/bin/:
+      glob: true
+      path: '../@cli-tools/bin/*'
