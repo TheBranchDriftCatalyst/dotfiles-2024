@@ -1,17 +1,16 @@
-# Vim-like keybind as default
+# 1) Emacs‐mode
 bindkey -e
-set -o emacs
 
-bindkey "^[[H" beginning-of-line
-bindkey "^[[F" end-of-line
+# 2) Plain arrow = char‐by‐char motion
+# bindkey '\e[C' forward-char
+# bindkey '\e[D' backward-char
 
-# Some terminals use these instead
-bindkey "^[[1~" beginning-of-line
-bindkey "^[[4~" end-of-line
+# # 3) Ctrl+Arrow (CSI versions) → word‐jumps
+# bindkey '\e[1;5C' forward-word
+# bindkey '\e[1;5D' backward-word
 
-bindkey "^[[3~" delete-char
+# 4) VS Code mapping: Ctrl+→ → C-E,   Ctrl+← → C-A
+bindkey '^E' forward-word    # Ctrl+E (VS Code’s Ctrl→)
+bindkey '^A' backward-word   # Ctrl+A (VS Code’s Ctrl←)
 
-# Alt + d => kill-word (kills the word ahead)
-bindkey "^[d" kill-word
-
-bindkey "^L" clear-screen
+# TODO: give some sweet output here

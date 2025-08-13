@@ -27,10 +27,17 @@
 .tool-versions
 .scratch/
 .codegpt/
+.repomix/
 
-# Not a fan of this, dont move this pattern off this computer lol
+# ?? ************************************
+# ! Not a fan of this, dont move this off this computer
+# ?? ************************************
+
 **/create_local_superuser.py
 docker/
 Taskfile.yaml
 Compose
 Procfile
+protecht*/**/show_loggers.py
+towncrier_helper.sh
+**/devsauce
