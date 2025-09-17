@@ -1,2 +1,1 @@
-# This file gets sourced by direnv whenever it loads
 source "$HOME/.config/direnv/lib/export_utils.sh"

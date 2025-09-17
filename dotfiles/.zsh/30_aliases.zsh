@@ -496,6 +496,6 @@ function o() {
 # the `.git` directory, listing directories first. The output gets piped into
 # `less` with options to preserve color and line numbers, unless the output is
 # small enough for one screen.
-function tree() {
-	tree -aC -I '.git|node_modules|bower_components' --dirsfirst "$@" | less -FRNX;
+tre() {
+    command tree -aC -I '.git|node_modules|bower_components' --dirsfirst "$@" | less -FRNX
 }

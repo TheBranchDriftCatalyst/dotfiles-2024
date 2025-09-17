@@ -22,8 +22,8 @@ if [[ -n $VIMRUNTIME ]]; then
   return 0
 fi
 
-# Move this to setups or somewhere elese in the afx provisioning process
-# only add successfuly commands to the history
+# Move this to setups or somewhere else in the afx provisioning process
+# only add successfully commands to the history
 zshaddhistory() { whence ${${(z)1}[1]} >| /dev/null || return 1 }
 eval "$(saml2aws --completion-script-zsh)"
 
@@ -35,16 +35,13 @@ source <(docker completion zsh)
 
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 
-# export fpath=(${ASDF_DATA_DIR:-$HOME/.asdf}/completions $fpath)
-# export PATH="$HOME/.asdf/shims:$PATH"
-
 source <(afx init)
 source <(afx completion zsh)
 
 eval "$(fzf --zsh)"
 
 # word split: `-`, `_`, `.`, `=`
-export WORDCHARS='*?[]~&;!#$%^(){}<>'
+export WORDSTAR='*?[]~&;!#$%^(){}<>'
 
 . "$HOME/.cargo/env"
 
@@ -58,3 +55,9 @@ autoload -Uz compinit
 compinit
 
 autoload -Uz colors
+
+# CLI-TOOLS-PATH-START
+# Added by CLI Tools installer - Mon Sep 15 18:18:44 PDT 2025
+export PATH="~/catalyst-devspace/catalyst/@cli-tools/bin:$PATH"
+export PATH="~/catalyst-devspace/catalyst/@cli-tools/shell:$PATH"
+# CLI-TOOLS-PATH-END

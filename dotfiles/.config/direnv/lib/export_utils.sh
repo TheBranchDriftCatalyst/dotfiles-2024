@@ -5,6 +5,8 @@ DEBUG_ENV_UTILS=${DEBUG_ENV_UTILS:-0}
 ENABLE_COLORS=${ENABLE_COLORS:-1}
 MEASURE_ENV_UTILS_PERF=${MEASURE_ENV_UTILS_PERF:-0}
 
+# TODO: add a unset check for the variables and display a ? mark as the symbol for those
+
 if ! JSON_TOOL=$(command -v jq); then
   echo "jq is required" >&2
   exit 1
@@ -65,7 +67,7 @@ write_json() {
 export_var() {
   local name=$1 value=$2 origin=${3:-envrc}
   debug_log "Exporting var: $name=$value (origin=$origin)"
-  export "$name=$value"
+  export "${name}=${value}"
 
   local status="✅"
   [[ "$value" =~ prod|production ]] && status="⚠️ PROD"
@@ -77,15 +79,17 @@ export_var() {
     '. += [{origin: $orig, name: $nm, value: $val, status: $st, overwritten: false}]' "$__env_json_file"
 }
 
+# TODO: This seems to be having issues when the directory is missing.
+# ...actually... think its the return 1 but just verify removing return 1 
+# does fix it
 export_dir() {
   local name=$1 dir=$2 origin=${3:-envrc}
   debug_log "Checking directory: $dir"
-
   if [[ ! -d "$dir" ]]; then
-    export_var "$name" "$dir" "$origin"
-    measure "export_dir.status:$name" write_json -c --arg nm "$name" \
-      '(.[] | select(.name == $nm)) |= . + {status: "❌ MISSING"}' "$__env_json_file"
-    return 1
+      export_var "$name" "$dir" "$origin"
+      measure "export_dir.status:$name" write_json -c --arg nm "$name" \
+        '(.[] | select(.name == $nm)) |= . + {status: "❌ MISSING"}' "$__env_json_file"
+      # return 1
   fi
 
   export_var "$name" "$dir" "$origin"
