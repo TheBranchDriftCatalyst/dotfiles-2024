@@ -1,0 +1,116 @@
+# 🚀 NvChad Beginner Cheatsheet
+
+## 🎯 Essential Vim Basics
+h,j,k,l ~ Move left, down, up, right
+w/b ~ Move word forward/backward
+0/$ ~ Go to beginning/end of line
+gg/G ~ Go to first/last line
+i/a ~ Insert before/after cursor
+I/A ~ Insert at beginning/end of line
+o/O ~ Open line below/above
+dd ~ Delete line
+yy ~ Copy line
+p/P ~ Paste below/above
+u ~ Undo
+Ctrl+r ~ Redo
+/text ~ Search for "text"
+n/N ~ Next/previous search result
+
+## 🔥 NvChad Specific Hotkeys
+<leader> = <Space> key
+
+### 📁 File Management
+<leader>ff ~ Find files (fuzzy + glob patterns + hidden files)
+<leader>fa ~ Find all files
+<leader>fw ~ Find word in files
+<leader>fb ~ Find buffers
+<leader>fh ~ Find help
+<leader>fo ~ Find old files
+<leader>fz ~ Find in current buffer
+
+### 🌳 File Explorer
+<leader>e ~ Toggle NvimTree
+<leader>n ~ Focus NvimTree
+
+### 📚 Beginner Helpers
+<leader>ch ~ Open this cheatsheet
+<leader>? ~ Show all keymaps (Which-Key)
+<leader>nh ~ Clear search highlights
+
+### 💾 File Operations
+Ctrl+s ~ Save file
+<leader>q ~ Quit
+<leader>Q ~ Quit all without saving
+
+### 🪟 Window Management
+Ctrl+h/j/k/l ~ Navigate windows
+Ctrl+arrows ~ Resize windows
+<leader>v ~ Vertical split
+<leader>h ~ Horizontal split
+
+### 🔄 Buffer Management
+Tab ~ Next buffer
+Shift+Tab ~ Previous buffer
+<leader>bd ~ Delete buffer
+<leader>x ~ Close buffer
+
+### 🎯 Text Manipulation
+Alt+j/k ~ Move line up/down
+< / > ~ Indent left/right (in visual mode)
+gcc ~ Comment/uncomment line
+gc ~ Comment selection (visual mode)
+
+### 🔍 Search & Replace
+/ ~ Search forward
+? ~ Search backward
+:%s/old/new/g ~ Replace all "old" with "new"
+:nohl ~ Clear search highlights
+
+### 💻 Terminal
+<leader>h ~ Horizontal terminal
+<leader>v ~ Vertical terminal
+<leader>i ~ Toggle floating terminal
+
+### 🎨 Themes
+<leader>th ~ Theme picker
+<leader>ff Themes ~ Browse available themes
+
+## 🚨 Emergency Exits
+:q! ~ Quit without saving
+:qa! ~ Quit all without saving
+Ctrl+c ~ Cancel current operation
+<Esc> ~ Exit insert mode
+
+## 💡 Pro Tips for Beginners
+1. Use 'jk' to exit insert mode (faster than Esc)
+2. Practice hjkl movement instead of arrow keys
+3. Use <leader>ch to open this cheatsheet anytime
+4. <leader>? shows you all available keymaps
+5. Start with basic movements, add complexity gradually
+6. Use :Tutor for built-in vim tutorial
+7. Flash plugin: Press 's' + 2 characters to jump anywhere
+8. Which-Key will show you options after pressing <leader>
+
+## 🎓 Learning Path
+1. Master basic movement (hjkl, w, b, 0, $)
+2. Learn insert modes (i, a, o, I, A, O)
+3. Practice copy/paste (yy, dd, p, P)
+4. Use file finder (<leader>ff)
+5. Learn visual mode (v, V, Ctrl+v)
+6. Master search and replace
+7. Explore plugins gradually
+
+Remember: Vim has a learning curve, but it's worth it! 🚀
+
+## ⚠️ Known Issues & Fixes
+
+### Command Mode (`:`) Issues
+If pressing `:` causes screen blanks or crashes:
+- Treesitter is disabled to fix directive conflicts with Neovim 0.11.4
+- Syntax highlighting still works via built-in Vim highlighting
+- All other features work normally
+
+### Plugin Loading Issues
+If plugins fail to load:
+- Run: `:Lazy sync` to update all plugins
+- Or restart nvim to auto-install missing plugins
