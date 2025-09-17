@@ -1,4 +1,4 @@
-[![wakatime](https://wakatime.com/badge/github/TheBranchDriftCatalyst/dotfiles-2024.svg)](https://wakatime.com/badge/github/TheBranchDriftCatalyst/dotfiles-2024)
+[![wakatime](https://wakatime.com/badge/user/b9837184-63ec-47ed-a833-edb1db90c4bf/project/8ce811f0-3bf8-4f69-8357-5ea1df98dd96.svg)](https://wakatime.com/badge/user/b9837184-63ec-47ed-a833-edb1db90c4bf/project/8ce811f0-3bf8-4f69-8357-5ea1df98dd96)
 
 # @dotfiles-2024
 
