@@ -39,6 +39,7 @@ This is the **@dotfiles-2024** project - a Dotbot-based dotfiles management syst
 - `dotfiles/.config/git/` - Git configuration and global ignore patterns
 - `dotfiles/.config/claude/` - Claude Code settings and statusline
 - `dotfiles/.config/.vscode/` - VSCode settings
+- `dotfiles/.config/nvim/` - Cyberpunk NvChad configuration for development
 
 ## Available Profiles
 
