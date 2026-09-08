@@ -1,0 +1,59 @@
+# ?? ************************************
+# !! NOTE: this is the global git ignore
+# ?? ************************************
+
+*~
+.tmux/plugins
+.DS_Store
+.zsh/history
+
+**/node_modules/
+**/.*_cache/
+**/.*-cache/
+**/.cache/
+**/cache/
+**/.idea/
+**/.next/
+**/.yarn/
+
+.envrc
+
+.kube/http-cache/
+.kube/cache/
+
+**/.tasks/
+
+/.backup
+.tool-versions
+.scratch/
+.codegpt/
+.repomix/
+
+# ?? ************************************
+# ! Not a fan of this, dont move this off this computer
+# ?? ************************************
+
+.claude/
+CLAUDE.md
+# ?? ************************************
+# ! Not a fan of this, dont move this off this computer
+# ?? ************************************
+
+.scratch
+.scratch/
+.beads/
+
+**/protecht-platform/Taskfile.yaml
+**/create_local_superuser.py
+.scratch-build/
+
+.playwright-mcp/
+.venv/
+.ruff_cache/
+.pytest_cache
+.serena/
+**/commands/devsauce/
+# devsauce — per-developer Django admin sandbox, lives inside protecht-platform repo
+# .devsauce/
+
+**/.claude/settings.local.json

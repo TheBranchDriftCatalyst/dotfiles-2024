@@ -1,0 +1,13 @@
+# direnv — may hold tokens; never track
+.envrc
+.direnv/
+
+# nix build outputs
+result
+result-*
+
+# home-manager backups
+*.hm-bak
+
+# OS noise
+.DS_Store
