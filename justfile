@@ -74,18 +74,21 @@ fmt:
 # Full end-to-end: build + activate + assert, in a throwaway container.
 # Proves homeConfigurations and every shared home/ module.
 # Cannot prove darwinConfigurations — that needs `just build` on macOS.
+# The named volume caches /nix between runs — without it every iteration
+# re-downloads ~100 packages. `just test-clean` drops the cache too.
 test:
     docker build -f test/Dockerfile -t {{image}} .
-    docker run --rm {{image}} ./test/run.sh
+    docker run --rm -v catalyst-nix-store:/nix {{image}} ./test/run.sh
 
 # Interactive shell in the test container, for poking at failures.
 test-shell:
     docker build -f test/Dockerfile -t {{image}} .
-    docker run --rm -it {{image}}
+    docker run --rm -it -v catalyst-nix-store:/nix {{image}}
 
 # Tear down test artifacts.
 test-clean:
     -docker rmi {{image}}
+    -docker volume rm catalyst-nix-store
     -rm -f result result-*
 
 # ── vm / containers (colima replaces Docker Desktop) ────────────────────────

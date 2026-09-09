@@ -34,7 +34,7 @@
     sops age mkcert
 
     # ── net & inspection ─────────────────────────────────────────────────
-    curl wget nmap socat httpstat testssl
+    curl wget nmap socat testssl   # httpstat: build broken on py3.14/unstable; use `curl -w`
 
     # ── general ──────────────────────────────────────────────────────────
     coreutils findutils gnused gnugrep gawk moreutils

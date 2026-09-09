@@ -83,9 +83,9 @@ has been evaluated. Gates, in order:
 
 ### Known gaps
 
-- afx `plugin.env`/`snippet` aliases (`exa`→`eza` set, `rm=gomi`, `g=lazygit`, `cat=bat`,
-  `BAT_PAGER`) are ported into `home/zsh.nix`. `dotfiles/.config/afx/` remains as reference
-  until the fzf snippet functions (`fzf_git_add` and friends) are ported too.
+- afx is fully retired: its aliases live in `home/zsh.nix`, its fzf helper functions in
+  `dotfiles/.zsh/60_fzf.zsh`, and its 81 packages in `home/packages.nix`. The `.config/afx`
+  directory is deleted; the `protecht` branch keeps the original YAMLs if archaeology is needed.
 - The two babarot gists supply `gcp-context` and `kube-context`, called from the tmux
   `status-left`. Not yet packaged.
 - `sops-nix` is wired as a flake input but no secrets are declared yet.
