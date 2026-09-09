@@ -40,6 +40,9 @@
     coreutils findutils gnused gnugrep gawk moreutils
     p7zip pigz unzip htop procs dust duf watch
     act glow hyperfine
+    just            # runs the repo justfile — the post-bootstrap control panel
+    nvd             # generation diffs for `just diff`
+    nix-output-monitor
 
     # ── fonts (these do NOT need a Homebrew cask) ────────────────────────
     nerd-fonts.hack
