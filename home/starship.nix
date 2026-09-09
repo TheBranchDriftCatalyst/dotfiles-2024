@@ -1,29 +1,21 @@
-# starship — the live prompt. (The repo also carried an 80K .p10k.zsh, which
-# was dead: p10k is commented out in the afx manifest and starship has been
-# the real prompt for some time. It is not carried forward.)
-{ ... }:
+# starship — the live prompt.
+#
+# The real config is dotfiles/starship.toml (409 lines, 23 sections, tuned
+# over years). It is linked LIVE (hybrid rule: tinker files stay editable
+# without a rebuild). programs.starship.settings is deliberately EMPTY —
+# setting it would generate a second starship.toml and conflict.
+{ config, dotfilesRepo, ... }:
 
+let
+  repo = "${config.home.homeDirectory}/${dotfilesRepo}";
+in
 {
   programs.starship = {
     enable = true;
     enableZshIntegration = true;
-    settings = {
-      add_newline = false;
-      command_timeout = 1000;
-
-      directory = {
-        truncation_length = 4;
-        truncate_to_repo = false;
-      };
-
-      git_status.disabled = false;
-      kubernetes.disabled = false;
-      aws.disabled = false;
-
-      # Keep the prompt fast; these are rarely useful and cost a subprocess.
-      package.disabled = true;
-      nodejs.disabled = true;
-      python.disabled = true;
-    };
+    # no `settings` — see header
   };
+
+  xdg.configFile."starship.toml".source =
+    config.lib.file.mkOutOfStoreSymlink "${repo}/dotfiles/starship.toml";
 }

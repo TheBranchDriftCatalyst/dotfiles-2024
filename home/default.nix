@@ -38,6 +38,14 @@
   };
 
   # @cli-tools/bin is appended by catalyst.nix, which owns that option.
+  # Small static dotfiles from the payload — pure store links.
+  home.file.".curlrc".source = ../dotfiles/.curlrc;
+  home.file.".dir_colors".source = ../dotfiles/.dir_colors;
+  home.file.".editorconfig".source = ../dotfiles/.editorconfig;
+  home.file.".prettierrc.yaml".source = ../dotfiles/.prettierrc.yaml;
+  home.file.".obsidian.vimrc".source = ../dotfiles/.obsidian.vimrc;
+  home.file.".gitmessage".source = ../dotfiles/.gitmessage;
+
   home.sessionPath = [
     "$HOME/bin"
     "$HOME/.local/bin"

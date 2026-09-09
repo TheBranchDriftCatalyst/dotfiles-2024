@@ -15,9 +15,7 @@ in
 {
   # Payload configs the old dotbot base profile linked; static, so pure store.
   xdg.configFile."gomi".source = ../dotfiles/.config/gomi;
-  xdg.configFile."enhancd".source = ../dotfiles/.config/enhancd;
   xdg.configFile."gh-dash".source = ../dotfiles/.config/gh-dash;
-  xdg.configFile."zsh".source = ../dotfiles/.config/zsh;   # zsh-abbr abbreviations
 
   # Link each file INDIVIDUALLY so ~/.zsh stays a real directory — HM itself
   # installs plugins under ~/.zsh/plugins/, and a whole-directory symlink made
@@ -51,12 +49,19 @@ in
       share = true;             # share_history
     };
 
+    # zsh-abbr via its first-class HM module (below), not a manual plugin —
+    # the old ~/.config/zsh/abbreviations file was functionally orphaned
+    # (nothing set ABBR_USER_ABBREVIATIONS_FILE after afx retired).
+    zsh-abbr = {
+      enable = true;
+      abbreviations = {
+        cf = "conftest";
+        tf = "terraform";
+        k8 = "kubectl";
+      };
+    };
+
     plugins = [
-      {
-        name = "zsh-abbr";
-        src = pkgs.zsh-abbr;
-        file = "share/zsh/zsh-abbr/zsh-abbr.zsh";
-      }
       {
         name = "zsh-history-search-multi-word";
         src = pkgs.zsh-history-search-multi-word;

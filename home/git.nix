@@ -39,6 +39,26 @@
       diff.colorMoved = "default";
       merge.conflictStyle = "zdiff3";
       rerere.enabled = true;
+      help.autocorrect = 1;
+      commit.template = "~/.gitmessage";
+
+      # ported from the old .gitconfig — `unadd` is load-bearing
+      # (fzf_git_unadd in dotfiles/.zsh/60_fzf.zsh calls it)
+      alias = {
+        st = "status";
+        co = "checkout";
+        ci = "commit";
+        br = "switch";
+        lo = "log --color=always --max-count=15 --oneline";
+        ll = "lla --first-parent";
+        lla = "log --graph --date=human --format='%C(#e3c78a)%h%C(#ff5454)%d%C(reset) - %C(#36c692)(%ad)%C(reset) %s %C(#80a0ff){%an}%C(reset)'";
+        graph = "log --graph --date-order --all --pretty=format:'%h %Cred%d %Cgreen%ad %Cblue%cn %Creset%s' --date=short";
+        unadd = "restore --staged";
+        review = "diff origin/HEAD...";
+        rvf = "diff origin/HEAD... --name-only";
+        rvc = "log --oneline ...origin/HEAD";
+        delete-merged-branches = "!git branch --merged | grep -v '\\*' | xargs -I % git branch -d %";
+      };
       # ssh rewriting is fine; token rewriting is not.
       url."ssh://git@github.com/".insteadOf = "https://github.com/";
     };
