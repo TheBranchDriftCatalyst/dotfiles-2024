@@ -16,6 +16,7 @@
     ./neovim.nix
     ./catalyst.nix
     ./ghostty.nix
+    ./vscode.nix
   ];
 
   home.username = lib.mkDefault "dj";
