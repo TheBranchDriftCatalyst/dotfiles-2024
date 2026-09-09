@@ -13,10 +13,15 @@ let
   mkLive = config.lib.file.mkOutOfStoreSymlink;
 in
 {
-  home.file.".zsh" = {
-    source = mkLive "${repo}/dotfiles/.zsh";
-    recursive = false;   # link the DIRECTORY, keeping it editable in-place
-  };
+  # Link each file INDIVIDUALLY so ~/.zsh stays a real directory — HM itself
+  # installs plugins under ~/.zsh/plugins/, and a whole-directory symlink made
+  # those writes land outside $HOME (same failure shape as the old afx#40 bug).
+  # builtins.readDir keeps this in sync with the repo automatically.
+  home.file = lib.mapAttrs' (name: _:
+    lib.nameValuePair ".zsh/${name}" {
+      source = mkLive "${repo}/dotfiles/.zsh/${name}";
+    }
+  ) (builtins.readDir ../dotfiles/.zsh);
 
   programs.zsh = {
     enable = true;
@@ -53,7 +58,15 @@ in
       }
     ];
 
-    initContent = lib.mkAfter ''
+    initContent = lib.mkMerge [
+      # fpath must be extended BEFORE compinit runs (HM emits compinit around
+      # order 550; mkOrder 400 lands ahead of it). These are the vendored
+      # completions (_gomi, _gist, _iap_curl …) the old .zshenv exposed.
+      (lib.mkOrder 400 ''
+        fpath=("$HOME/.zsh/Completion" $fpath)
+      '')
+
+      (lib.mkAfter ''
       # ── the afx replacement ────────────────────────────────────────────
       # Source every numbered config file, in order. 00_guards.zsh defines
       # has()/src()/try_eval()/try_comp() and MUST sort first — everything
@@ -91,7 +104,14 @@ in
       alias jq='jq -C'
       alias diff='colordiff -u'
       export BAT_PAGER='less -RF'
-    '';
+
+      # fzf integration — guard on a real terminal, not [[ -o zle ]]; key
+      # bindings are meaningless without one and the eval errors headlessly.
+      if has fzf && [[ -t 0 ]]; then
+        eval "$(fzf --zsh)"
+      fi
+      '')
+    ];
   };
 
   # fzf: the old setup had THREE competing configurations (.zprofile's
@@ -99,7 +119,10 @@ in
   # This is the single source of truth.
   programs.fzf = {
     enable = true;
-    enableZshIntegration = true;
+    # HM's integration evals fzf's key-bindings unguarded; in a shell with no
+    # real terminal that prints "can't change option: zle" (verified on the
+    # old setup too). We do it ourselves below, guarded on an actual TTY.
+    enableZshIntegration = false;
     defaultCommand = "fd --type f";
     changeDirWidgetCommand = "fd --type d";
     changeDirWidgetOptions = [ "--preview 'tree -C {} | head -100'" ];

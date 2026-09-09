@@ -42,8 +42,8 @@ echo "══ 4. links ══"
 check "~/.zshrc exists"        test -e "$HOME/.zshrc"
 check "~/.zsh dir present"     test -d "$HOME/.zsh"
 check "numbered zsh files"     sh -c 'ls "$HOME"/.zsh/[0-9]*.zsh >/dev/null 2>&1'
-check "~/.gitconfig exists"    test -e "$HOME/.gitconfig"
-check "~/.tmux.conf exists"    test -e "$HOME/.tmux.conf"
+check "git config (xdg)"       test -e "$HOME/.config/git/config"
+check "tmux.conf (xdg)"        test -e "$HOME/.config/tmux/tmux.conf"
 
 echo "══ 5. tools on PATH (the afx+brew replacement) ══"
 . "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh" 2>/dev/null || true
@@ -53,6 +53,8 @@ for t in zsh tmux eza bat rg fd jq yq delta starship gh lazygit k9s kubectl sops
 done
 
 echo "══ 6. THE MONEY TEST: does an interactive shell start silently? ══"
+# TERM must be sane: starship (correctly) skips init on a dumb terminal.
+export TERM=xterm-256color
 out="$(zsh -i -c exit 2>&1)"
 if [ -n "$out" ]; then
   bad "interactive zsh emitted output:"
@@ -66,7 +68,7 @@ check "aliases loaded"          zsh -i -c 'alias | grep -q .'
 check "has() defined"           zsh -i -c 'typeset -f has >/dev/null'
 check "catalyst-doctor defined" zsh -i -c 'typeset -f catalyst-doctor >/dev/null'
 check "compdef worked"          zsh -i -c 'typeset -f git_dbranch >/dev/null'
-check "starship is the prompt"  zsh -i -c 'typeset -f starship_precmd >/dev/null'
+check "starship is the prompt"  zsh -i -c 'typeset -f prompt_starship_precmd >/dev/null'
 
 echo
 if [ "$fails" -eq 0 ]; then

@@ -13,7 +13,10 @@
     enableZshIntegration = true;
 
     settings = {
-      theme = "tokyonight_storm";
+      # Ghostty bundles all the schemes from the old etc/iterm2 collection —
+      # "Synthwave Everything", "Synthwave Alpha", "TokyoNight Storm", "Nord",
+      # "Nordfox". Names are the display names, spaces included.
+      theme = "Synthwave Everything";
       font-family = "Hack Nerd Font";
       font-size = 13;
 
