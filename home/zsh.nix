@@ -124,12 +124,16 @@ in
     # old setup too). We do it ourselves below, guarded on an actual TTY.
     enableZshIntegration = false;
     defaultCommand = "fd --type f";
-    changeDirWidgetCommand = "fd --type d";
-    changeDirWidgetOptions = [ "--preview 'tree -C {} | head -100'" ];
-    fileWidgetCommand = "rg --files --hidden --follow --glob '!.git/*'";
-    fileWidgetOptions = [
-      "--preview 'bat --color=always --style=header,grid --line-range :100 {}'"
-    ];
+    changeDirWidget = {
+      command = "fd --type d";
+      options = [ "--preview 'tree -C {} | head -100'" ];
+    };
+    fileWidget = {
+      command = "rg --files --hidden --follow --glob '!.git/*'";
+      options = [
+        "--preview 'bat --color=always --style=header,grid --line-range :100 {}'"
+      ];
+    };
     defaultOptions = [
       "--height 75%" "--multi" "--reverse" "--margin=0,1"
       "--marker=+" "--pointer=▶" "--prompt=❯ " "--no-separator"

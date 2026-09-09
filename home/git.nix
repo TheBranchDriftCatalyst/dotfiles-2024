@@ -11,8 +11,7 @@
     enable = true;
     lfs.enable = true;
 
-    userName = "DJ Daniels";
-    userEmail = "djdanielsh@gmail.com";
+
 
     # Work identity applies only inside the work tree — no global override,
     # so a personal repo can never be committed with the employer address.
@@ -29,7 +28,10 @@
       "**/.claude/settings.local.json"
     ];
 
-    extraConfig = {
+    # HM renamed userName/userEmail/extraConfig into `settings`.
+    settings = {
+      user.name = "DJ Daniels";
+      user.email = "djdanielsh@gmail.com";
       init.defaultBranch = "main";
       push.autoSetupRemote = true;
       pull.rebase = true;
