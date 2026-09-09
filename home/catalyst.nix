@@ -13,6 +13,7 @@ in
   # dotbot's `git:` directive cloned @cli-tools / @machines / @secrets. These
   # are working repos you commit to, so they must NOT become read-only store
   # paths via flake inputs — an activation script preserves the semantics.
+  # TODO: need to add some tender love and care here
   home.activation.catalystRepos =
     lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       _clone() {
