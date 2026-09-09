@@ -116,6 +116,17 @@ in
       alias diff='colordiff -u'
       export BAT_PAGER='less -RF'
 
+      # bare `cd` -> interactive picker of recent dirs (the old enhancd
+      # muscle memory, rebuilt on zoxide's frecency db + fzf). With args,
+      # cd behaves normally; zoxide keeps learning either way.
+      cd() {
+        if (( $# == 0 )) && whence __zoxide_zi >/dev/null 2>&1; then
+          __zoxide_zi
+        else
+          builtin cd "$@"
+        fi
+      }
+
       # auto-list on cd: every directory change shows what's there.
       # Guarded on a real terminal; capped for huge dirs so cd into
       # node_modules doesn't flood the screen.

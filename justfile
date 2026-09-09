@@ -69,6 +69,18 @@ gc:
 fmt:
     nix run nixpkgs#nixfmt-rfc-style -- $(find . -name '*.nix' -not -path './.git/*')
 
+# Register the repo's pre-commit gate (gitleaks + lint). Bootstrap does this
+# too; run it after any manual clone.
+hooks:
+    git config core.hooksPath .githooks
+    @echo "✔ hooks registered — commits now gated by .githooks/pre-commit"
+
+# Run the pre-commit checks against the working tree without committing.
+lint:
+    git stash -q --keep-index 2>/dev/null || true
+    -.githooks/pre-commit
+    git stash pop -q 2>/dev/null || true
+
 # ── testing ─────────────────────────────────────────────────────────────────
 
 # Full end-to-end: build + activate + assert, in a throwaway container.

@@ -5,15 +5,12 @@
 { pkgs, ... }:
 
 {
-  system.stateVersion = 5;
-  nixpkgs.hostPlatform = "aarch64-darwin";
-  nixpkgs.config.allowUnfree = true;
+  nixpkgs = {
+    hostPlatform = "aarch64-darwin";
+    config.allowUnfree = true;
+  };
 
   users.users.dj.home = "/Users/dj";
-
-  # nix-darwin activation runs as root now; user-scoped options (homebrew,
-  # dock/finder defaults, screencapture) apply to this user.
-  system.primaryUser = "dj";
 
   # Determinate Nix manages the daemon and nix.conf itself (flakes are on by
   # default there); nix-darwin must not fight it — its native Nix management
@@ -23,38 +20,46 @@
   programs.zsh.enable = true;   # ensure /etc/zshrc sources the nix profile
 
   # ── macOS defaults ────────────────────────────────────────────────────
-  system.defaults = {
-    NSGlobalDomain = {
-      KeyRepeat = 2;
-      InitialKeyRepeat = 15;
-      ApplePressAndHoldEnabled = false;
-      AppleShowAllExtensions = true;
-      NSDocumentSaveNewDocumentsToCloud = false;
-    };
+  system = {
+    stateVersion = 5;
+    # nix-darwin activation runs as root now; user-scoped options (homebrew,
+    # dock/finder defaults, screencapture) apply to this user.
+    primaryUser = "dj";
 
-    finder = {
-      AppleShowAllFiles = true;
-      ShowPathbar = true;
-      ShowStatusBar = true;
-      FXEnableExtensionChangeWarning = false;
-    };
+    defaults = {
+      NSGlobalDomain = {
+        AppleInterfaceStyle = "Dark";      # system-wide dark mode
+        KeyRepeat = 2;
+        InitialKeyRepeat = 15;
+        ApplePressAndHoldEnabled = false;
+        AppleShowAllExtensions = true;
+        NSDocumentSaveNewDocumentsToCloud = false;
+      };
 
-    dock = {
-      autohide = true;
-      show-recents = false;
-      # Declared dock = the ONLY pinned apps. Everything Apple ships pinned
-      # (Safari, Messages, Mail, Maps, Photos, TV, News…) is removed on
-      # switch. Add/remove lines here, not by dragging — a switch resets it.
-      persistent-apps = [
-        "/Applications/Ghostty.app"
-        "/Applications/Visual Studio Code.app"
-        "/Applications/Google Chrome.app"
-      ];
-    };
+      finder = {
+        AppleShowAllFiles = true;
+        ShowPathbar = true;
+        ShowStatusBar = true;
+        FXEnableExtensionChangeWarning = false;
+      };
 
-    screencapture = {
-      location = "/Users/dj/Screenshots";
-      type = "png";
+      dock = {
+        autohide = true;
+        show-recents = false;
+        # Declared dock = the ONLY pinned apps. Everything Apple ships pinned
+        # (Safari, Messages, Mail, Maps, Photos, TV, News…) is removed on
+        # switch. Add/remove lines here, not by dragging — a switch resets it.
+        persistent-apps = [
+          "/Applications/Ghostty.app"
+          "/Applications/Visual Studio Code.app"
+          "/Applications/Google Chrome.app"
+        ];
+      };
+
+      screencapture = {
+        location = "/Users/dj/Screenshots";
+        type = "png";
+      };
     };
   };
 
@@ -83,6 +88,7 @@
     # the Desktop app and colima fight over the docker socket/context.
     casks = [
       "ghostty"                  # nixpkgs' ghostty is Linux-only
+      "stats"                    # free open-source iStat Menus (exelban/stats)
       "visual-studio-code"
       "jetbrains-toolbox"
       "insomnia"

@@ -1,0 +1,5 @@
+# W20 (repeated keys) is disabled deliberately: `programs.zsh = …` and
+# `programs.fzf = …` as sibling blocks is idiomatic home-manager module
+# style; collapsing every module into one mega-attrset hurts readability.
+# All other statix checks stay on.
+disabled = [ "repeated_keys" ]
