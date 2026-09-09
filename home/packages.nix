@@ -12,7 +12,7 @@
     bat eza fd ripgrep delta tree sd grex
 
     # ── data wrangling ───────────────────────────────────────────────────
-    jq yq-go fx gron xsv jless
+    jq yq-go fx gron xan jless   # xan = maintained xsv fork (xsv was dropped from nixpkgs)
 
     # ── git & code ───────────────────────────────────────────────────────
     lazygit gh ghq git-lfs difftastic
@@ -24,7 +24,7 @@
 
     # ── containers & k8s ─────────────────────────────────────────────────
     kubectl kubectx kubernetes-helm kustomize k9s stern
-    kubetail kubeval kubesec ketall kubectl-view-secret
+    kubetail kubeval kubesec kubectl-view-secret   # ketall: dropped from nixpkgs; use `kubectl get all -A`
     lazydocker ctop dive
 
     # ── cloud & IaC ──────────────────────────────────────────────────────

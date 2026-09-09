@@ -83,10 +83,9 @@ has been evaluated. Gates, in order:
 
 ### Known gaps
 
-- **afx `plugin.env` / `snippet` blocks are not yet ported.** `dotfiles/.config/afx/` is retained
-  purely as migration reference. It still holds aliases and env that live nowhere else —
-  the 7 `exa` aliases, `BAT_PAGER`/`BAT_THEME`, `alias rm=gomi`, `alias g=lazygit`, the `jq`
-  globals. These must land in `home/zsh.nix` before afx is deleted.
+- afx `plugin.env`/`snippet` aliases (`exa`→`eza` set, `rm=gomi`, `g=lazygit`, `cat=bat`,
+  `BAT_PAGER`) are ported into `home/zsh.nix`. `dotfiles/.config/afx/` remains as reference
+  until the fzf snippet functions (`fzf_git_add` and friends) are ported too.
 - The two babarot gists supply `gcp-context` and `kube-context`, called from the tmux
   `status-left`. Not yet packaged.
 - `sops-nix` is wired as a flake input but no secrets are declared yet.

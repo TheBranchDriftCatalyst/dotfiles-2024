@@ -21,14 +21,6 @@
       contents.user.email = "h.daniels@protecht.com";
     }];
 
-    delta = {
-      enable = true;
-      options = {
-        navigate = true;
-        line-numbers = true;
-        syntax-theme = "OneHalfDark";
-      };
-    };
 
     ignores = [
       ".DS_Store"
@@ -47,6 +39,17 @@
       rerere.enabled = true;
       # ssh rewriting is fine; token rewriting is not.
       url."ssh://git@github.com/".insteadOf = "https://github.com/";
+    };
+  };
+
+  # HM renamed programs.git.delta.* to a top-level module.
+  programs.delta = {
+    enable = true;
+    enableGitIntegration = true;
+    options = {
+      navigate = true;
+      line-numbers = true;
+      syntax-theme = "OneHalfDark";
     };
   };
 

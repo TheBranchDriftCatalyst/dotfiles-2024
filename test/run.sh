@@ -15,27 +15,28 @@ case "$(uname -m)" in
 esac
 echo "══ target: .#homeConfigurations.${CFG} ($(uname -m)) ══"
 
+# POSIX sh has no pipefail: `cmd | tail` reports tail's status and masks the
+# failure. Capture to a file, test the command's own status, then show a tail.
+LOG=/tmp/step.log
+run_step() {  # run_step <desc> <cmd...>
+  d="$1"; shift
+  if "$@" >"$LOG" 2>&1; then
+    tail -5 "$LOG"; ok "$d"
+  else
+    tail -40 "$LOG"; bad "$d"; exit 1
+  fi
+}
+
 echo "══ 1. flake evaluates ══"
-if nix flake show --no-write-lock-file 2>&1 | tail -20; then
-  ok "flake show"
-else
-  bad "flake show — flake does not evaluate"; exit 1
-fi
+run_step "flake show" nix flake show --no-write-lock-file
 
 echo "══ 2. activation package BUILDS ══"
-if nix build ".#homeConfigurations.${CFG}.activationPackage" \
-     --no-write-lock-file --print-build-logs 2>&1 | tail -30; then
-  ok "activationPackage built"
-else
-  bad "build failed"; exit 1
-fi
+run_step "activationPackage built" \
+  nix build ".#homeConfigurations.${CFG}.activationPackage" \
+    --no-write-lock-file --print-build-logs
 
 echo "══ 3. activate against a real \$HOME ══"
-if ./result/activate 2>&1 | tail -20; then
-  ok "activation succeeded"
-else
-  bad "activation failed"; exit 1
-fi
+run_step "activation succeeded" ./result/activate
 
 echo "══ 4. links ══"
 check "~/.zshrc exists"        test -e "$HOME/.zshrc"
@@ -47,7 +48,7 @@ check "~/.tmux.conf exists"    test -e "$HOME/.tmux.conf"
 echo "══ 5. tools on PATH (the afx+brew replacement) ══"
 . "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh" 2>/dev/null || true
 export PATH="$HOME/.nix-profile/bin:$PATH"
-for t in zsh tmux eza bat rg fd jq yq delta starship gh lazygit k9s kubectl sops age; do
+for t in zsh tmux eza bat rg fd jq yq delta starship gh lazygit k9s kubectl sops age testssl.sh; do
   check "$t" command -v "$t"
 done
 

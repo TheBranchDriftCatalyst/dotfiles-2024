@@ -30,6 +30,13 @@
       mkArgs = system: {
         inherit inputs dotfilesRepo system;
       };
+
+      # legacyPackages cannot carry config; zsh-abbr is unfree (HL3), so the
+      # standalone HM targets need an explicit import with allowUnfree.
+      mkPkgs = system: import nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+      };
     in
     {
       # ── macOS ──────────────────────────────────────────────────────────────
@@ -46,7 +53,7 @@
               useGlobalPkgs = true;
               useUserPackages = true;
               extraSpecialArgs = mkArgs "aarch64-darwin";
-              users.dj = import ./home;
+              users.dj.imports = [ ./home ./home/darwin.nix ];
               # Move aside any pre-existing file rather than failing activation.
               backupFileExtension = "hm-bak";
             };
@@ -57,15 +64,15 @@
       # ── Linux (standalone home-manager — works on ANY distro) ──────────────
       #   home-manager switch --flake .#dj-linux
       homeConfigurations."dj-linux" = home-manager.lib.homeManagerConfiguration {
-        pkgs = nixpkgs.legacyPackages."x86_64-linux";
+        pkgs = mkPkgs "x86_64-linux";
         extraSpecialArgs = mkArgs "x86_64-linux";
-        modules = [ ./home ./hosts/dj-linux ];
+        modules = [ ./home ./home/linux.nix ./hosts/dj-linux ];
       };
 
       homeConfigurations."dj-linux-arm" = home-manager.lib.homeManagerConfiguration {
-        pkgs = nixpkgs.legacyPackages."aarch64-linux";
+        pkgs = mkPkgs "aarch64-linux";
         extraSpecialArgs = mkArgs "aarch64-linux";
-        modules = [ ./home ./hosts/dj-linux ];
+        modules = [ ./home ./home/linux.nix ./hosts/dj-linux ];
       };
     };
 }

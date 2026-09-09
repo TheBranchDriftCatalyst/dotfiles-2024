@@ -3,6 +3,9 @@
 { pkgs, lib, ... }:
 
 {
+  # NOTE: imports must be STATIC. Deriving them from pkgs.stdenv.isDarwin
+  # causes infinite recursion (pkgs is a module arg, resolved after imports).
+  # Platform modules are attached at the flake level instead.
   imports = [
     ./packages.nix
     ./zsh.nix
@@ -12,9 +15,7 @@
     ./neovim.nix
     ./catalyst.nix
     ./ghostty.nix
-  ]
-  ++ lib.optional pkgs.stdenv.isDarwin ./darwin.nix
-  ++ lib.optional pkgs.stdenv.isLinux ./linux.nix;
+  ];
 
   home.username = lib.mkDefault "dj";
   home.homeDirectory = lib.mkDefault (

@@ -87,3 +87,24 @@ test-shell:
 test-clean:
     -docker rmi {{image}}
     -rm -f result result-*
+
+# ── vm / containers (colima replaces Docker Desktop) ────────────────────────
+
+# Start the container VM. k8s=true adds a k3s cluster inside it
+# (replaces minikube/k3d from the old setup).
+vm k8s="false":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ "{{k8s}}" == "true" ]]; then
+      colima start --cpu 4 --memory 8 --disk 60 --kubernetes
+    else
+      colima start --cpu 4 --memory 8 --disk 60
+    fi
+    docker context use colima >/dev/null
+    colima status
+
+vm-stop:
+    colima stop
+
+vm-destroy:
+    colima delete --force

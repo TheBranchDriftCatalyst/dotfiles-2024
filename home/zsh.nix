@@ -74,6 +74,23 @@ in
 
       # only record commands that actually resolve to something
       zshaddhistory() { whence ''${''${(z)1}[1]} >| /dev/null || return 1 }
+
+      # ── aliases ported from afx plugin.env/snippet blocks ──────────────
+      # These lived only in ~/.config/afx/*.yaml, not in 30_aliases.zsh —
+      # verified no collisions. exa aliases carried over onto eza.
+      alias ls='eza'
+      alias l='eza -1'
+      alias ll='eza -l --git'
+      alias la='eza -a'
+      alias lla='eza -la --git'
+      alias lt='eza --tree --level=2'
+      alias lta='eza --tree --level=2 -a'
+      alias cat='bat'
+      alias rm='gomi'
+      alias g='lazygit'
+      alias jq='jq -C'
+      alias diff='colordiff -u'
+      export BAT_PAGER='less -RF'
     '';
   };
 

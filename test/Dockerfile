@@ -22,14 +22,12 @@ RUN mkdir -p /etc/nix && \
     printf 'experimental-features = nix-command flakes\nfilter-syscalls = false\n' \
       >> /etc/nix/nix.conf
 
-RUN nix profile install nixpkgs#shadow nixpkgs#gnugrep 2>/dev/null || true
-
 ARG USER=dj
 ARG UID=1000
+# The nixos/nix image ships no shadow-utils; append the user records directly.
 RUN mkdir -p /home/${USER} && \
-    (addgroup -g ${UID} ${USER} 2>/dev/null || groupadd -g ${UID} ${USER}) && \
-    (adduser -D -u ${UID} -G ${USER} -h /home/${USER} ${USER} 2>/dev/null || \
-     useradd -u ${UID} -g ${UID} -d /home/${USER} ${USER}) && \
+    echo "${USER}:x:${UID}:${UID}::/home/${USER}:/bin/sh" >> /etc/passwd && \
+    echo "${USER}:x:${UID}:" >> /etc/group && \
     chown -R ${UID}:${UID} /home/${USER} /nix
 
 USER ${USER}
