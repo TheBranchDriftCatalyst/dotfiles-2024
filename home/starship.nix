@@ -17,7 +17,72 @@
     enableZshIntegration = true;
 
     settings = {
+      # ── the frame ─────────────────────────────────────────────────────
+      # ╭─ ctx: dir · git · langs · infra ····· time
+      # ╰─🚀
+      format = builtins.concatStringsSep "" [
+        "[╭─](fg:surface)"
+        "$username$hostname"
+        "$directory"
+        "$git_branch$git_commit$git_state$git_status"
+        "$python$docker_context$aws"
+        "$nix_shell$direnv"
+        "$fill"
+        "$cmd_duration$jobs$shlvl$sudo"
+        "$time"
+        "$line_break"
+        "[╰─](fg:surface)$status$character"
+      ];
       right_format = "$battery";
+
+      palette = "synthwave";
+      palettes.synthwave = {
+        neon_pink = "#ff2e97";
+        neon_cyan = "#5ee7ff";
+        neon_violet = "#9d6bff";
+        neon_yellow = "#ffef00";
+        surface = "#4a3b78";
+      };
+
+      fill = {
+        symbol = "·";
+        style = "fg:surface";
+      };
+
+      # ❄️ inside a nix devshell / nix develop — you live here now
+      nix_shell = {
+        symbol = "❄️ ";
+        format = "[$symbol$state]($style) ";
+        style = "bold neon_cyan";
+        impure_msg = "[impure](bold red)";
+        pure_msg = "[pure](bold neon_cyan)";
+        unknown_msg = "[shell](bold neon_violet)";
+      };
+
+      # 🔓 sudo credentials currently cached — know when you're hot
+      sudo = {
+        disabled = false;
+        symbol = "🔓 ";
+        format = "[$symbol]($style)";
+        style = "bold neon_pink";
+      };
+
+      # exit status with signal names (💥 says "failed", this says WHY)
+      status = {
+        disabled = false;
+        format = "[$symbol$common_meaning$signal_name$maybe_int]($style) ";
+        symbol = "✘ ";
+        map_symbol = true;
+        pipestatus = true;
+        style = "bold red";
+      };
+
+      time = {
+        disabled = false;
+        time_format = "%H:%M";
+        format = "[$time]($style) ";
+        style = "fg:neon_violet";
+      };
 
       character = {
         success_symbol = "[🚀](bold green) ";
@@ -29,7 +94,7 @@
         truncate_to_repo = true;
         truncation_symbol = "⚓/";
         format = "[$path]($style)[$read_only]($read_only_style) ";
-        style = "fg:#00FFFF bold";
+        style = "fg:neon_cyan bold";
         read_only = "🔒";
         read_only_style = "fg:red bold";
       };
@@ -48,12 +113,12 @@
       git_branch = {
         symbol = "🌴 ";
         format = "[$symbol$branch]($style) ";
-        style = "bold #ff2975";
+        style = "bold neon_pink";
       };
 
       git_status = {
         format = "[($all_status$ahead_behind)]($style) ";
-        style = "fg:#FF00FF bold";
+        style = "fg:neon_pink bold";
         conflicted = "​⚔️​ \${count} ";
         ahead = "​⬆️​ \${count} ";
         behind = "​⬇️​ \${count} ";
@@ -78,14 +143,14 @@
         min_time = 2000;
         show_milliseconds = true;
         format = "[⌛ $duration]($style) ";
-        style = "fg:#FFEF00 bold";
+        style = "fg:neon_yellow bold";
       };
 
       jobs = {
         threshold = 1;
         symbol = "✦";
         format = "[$symbol$number]($style) ";
-        style = "fg:#FF00FF bold";
+        style = "fg:neon_pink bold";
       };
 
       username = {
@@ -110,7 +175,7 @@
       docker_context = {
         symbol = "🐳 ";
         format = "via [$symbol$context]($style) ";
-        style = "bold #00dfff";
+        style = "bold neon_cyan";
       };
 
       aws = {
@@ -131,7 +196,13 @@
         ];
       };
 
-      shlvl.disabled = false;
+      shlvl = {
+        disabled = false;
+        threshold = 2;              # only when nested — depth 1 is just life
+        symbol = "🕳️ ";
+        format = "[$symbol$shlvl]($style) ";
+        style = "bold neon_violet";
+      };
     };
   };
 }
