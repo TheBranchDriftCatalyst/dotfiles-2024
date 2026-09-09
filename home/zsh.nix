@@ -117,17 +117,19 @@ in
       export BAT_PAGER='less -RF'
 
       # auto-list on cd: every directory change shows what's there.
-      # Guarded so scripts and huge dirs don't suffer.
+      # Guarded on a real terminal; capped for huge dirs so cd into
+      # node_modules doesn't flood the screen.
       _eza_on_chpwd() {
         [[ -t 1 ]] || return 0
-        local n; n=($(command ls -A 2>/dev/null | head -101)) 2>/dev/null
-        if (( ${#n[@]} > 100 )); then
-          eza | head -20; print -P "%F{8}… $(command ls -A | wc -l | tr -d ' ') entries%f"
+        local count
+        count=$(command ls -A 2>/dev/null | wc -l | tr -d " ")
+        if [[ "''${count:-0}" -gt 100 ]]; then
+          eza --group-directories-first | head -20
+          print -P "%F{8}… ''${count} entries%f"
         else
           eza --group-directories-first
         fi
       }
-      autoload -Uz add-zsh-hook
       add-zsh-hook chpwd _eza_on_chpwd
 
       # fzf integration — guard on a real terminal, not [[ -o zle ]]; key
