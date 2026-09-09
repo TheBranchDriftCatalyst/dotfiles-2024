@@ -62,11 +62,12 @@
       upgrade = false;
     };
 
+    # NOT docker — Docker Desktop is replaced by colima (home/darwin.nix);
+    # the Desktop app and colima fight over the docker socket/context.
     casks = [
       "ghostty"                  # nixpkgs' ghostty is Linux-only
       "visual-studio-code"
       "jetbrains-toolbox"
-      "docker"
       "insomnia"
       "postman"
       "dash"
