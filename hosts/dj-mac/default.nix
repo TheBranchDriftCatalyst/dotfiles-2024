@@ -48,10 +48,7 @@
       persistent-apps = [
         "/Applications/Ghostty.app"
         "/Applications/Visual Studio Code.app"
-        "/Applications/Firefox.app"
-        "/Applications/Obsidian.app"
-        "/Applications/Spotify.app"
-        "/System/Applications/System Settings.app"
+        "/Applications/Google Chrome.app"
       ];
     };
 
@@ -94,6 +91,7 @@
       "1password"
       "gpg-suite"
       "firefox"
+      "google-chrome"
       "alfred"
       "rectangle-pro"
       "obsidian"
