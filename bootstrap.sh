@@ -133,8 +133,17 @@ step "4. build (changes nothing)"
 cd "$REPO_DIR"
 
 case "$OS" in
-  Darwin) TARGET="dj-mac" ;;
-  Linux)  [ "$ARCH" = "aarch64" ] && TARGET="dj-linux-arm" || TARGET="dj-linux" ;;
+  Darwin)
+    # darwin configs are named by hostname. A brand-new machine won't have a
+    # hosts/<name>/ yet — say so instead of failing cryptically.
+    TARGET="$(hostname -s)"
+    if ! grep -q "\"$TARGET\"" "$REPO_DIR/flake.nix"; then
+      warn "no darwinConfigurations.\"$TARGET\" in flake.nix —"
+      warn "create hosts/$TARGET/ (copy hosts/teakbookM5DJ) and wire it in flake.nix"
+      die  "then rerun"
+    fi
+    ;;
+  Linux)  [ "$ARCH" = "aarch64" ] && TARGET="linux-generic-arm" || TARGET="linux-generic" ;;
 esac
 
 info "building .#${TARGET} — first run downloads a lot; go get coffee…"

@@ -40,12 +40,13 @@
     in
     {
       # ── macOS ──────────────────────────────────────────────────────────────
-      #   darwin-rebuild switch --flake .#dj-mac
-      darwinConfigurations."dj-mac" = nix-darwin.lib.darwinSystem {
+      # Named by real hostname, so `darwin-rebuild switch --flake .` picks the
+      # matching config with no #target. A new Mac gets its own hosts/<name>/.
+      darwinConfigurations."teakbookM5DJ" = nix-darwin.lib.darwinSystem {
         system = "aarch64-darwin";
         specialArgs = mkArgs "aarch64-darwin";
         modules = [
-          ./hosts/dj-mac
+          ./hosts/teakbookM5DJ
           sops-nix.darwinModules.sops
           home-manager.darwinModules.home-manager
           {
@@ -53,7 +54,7 @@
               useGlobalPkgs = true;
               useUserPackages = true;
               extraSpecialArgs = mkArgs "aarch64-darwin";
-              users.dj.imports = [ ./home ./home/darwin.nix ./hosts/dj-mac/home.nix ];
+              users.dj.imports = [ ./home ./home/darwin.nix ./hosts/teakbookM5DJ/home.nix ];
               # Move aside any pre-existing file rather than failing activation.
               backupFileExtension = "hm-bak";
             };
@@ -62,17 +63,18 @@
       };
 
       # ── Linux (standalone home-manager — works on ANY distro) ──────────────
-      #   home-manager switch --flake .#dj-linux
-      homeConfigurations."dj-linux" = home-manager.lib.homeManagerConfiguration {
+      # Generic by design: for borrowed boxes and containers, not a specific
+      # machine.   home-manager switch --flake .#linux-generic
+      homeConfigurations."linux-generic" = home-manager.lib.homeManagerConfiguration {
         pkgs = mkPkgs "x86_64-linux";
         extraSpecialArgs = mkArgs "x86_64-linux";
-        modules = [ ./home ./home/linux.nix ./hosts/dj-linux ];
+        modules = [ ./home ./home/linux.nix ./hosts/linux-generic ];
       };
 
-      homeConfigurations."dj-linux-arm" = home-manager.lib.homeManagerConfiguration {
+      homeConfigurations."linux-generic-arm" = home-manager.lib.homeManagerConfiguration {
         pkgs = mkPkgs "aarch64-linux";
         extraSpecialArgs = mkArgs "aarch64-linux";
-        modules = [ ./home ./home/linux.nix ./hosts/dj-linux ];
+        modules = [ ./home ./home/linux.nix ./hosts/linux-generic ];
       };
     };
 }

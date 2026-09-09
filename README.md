@@ -4,10 +4,10 @@ One flake. macOS and any Linux distro, from the same module set.
 
 ```sh
 # macOS
-darwin-rebuild switch --flake .#dj-mac
+darwin-rebuild switch --flake  .   # hostname auto-selects
 
 # Linux — any distro, including boxes you don't own
-home-manager switch --flake .#dj-linux
+home-manager switch --flake .#linux-generic
 ```
 
 **New here?** Read [docs/METHODOLOGY.md](docs/METHODOLOGY.md) — how the store,
@@ -31,8 +31,8 @@ The old system is preserved on the **`protecht`** branch and still works.
 
 ```
 flake.nix              inputs: nixpkgs, home-manager, nix-darwin, sops-nix
-hosts/dj-mac/          nix-darwin: macOS defaults, Homebrew casks, fonts
-hosts/dj-linux/        standalone home-manager overrides
+hosts/teakbookM5DJ/          nix-darwin: macOS defaults, Homebrew casks, fonts
+hosts/linux-generic/        standalone home-manager overrides
 home/
   default.nix          shared, imported by BOTH platforms
   packages.nix         the portable tool layer — replaces afx AND Brewfile.core
@@ -69,7 +69,7 @@ reproducibility and miserable for iteration. So:
 ## What Homebrew still does
 
 nix-darwin **does not install Homebrew** — it drives `brew bundle` for GUI apps. Casks are
-declared in `hosts/dj-mac` with `cleanup = "zap"`, so unlisted apps are removed. `little-snitch`
+declared in `hosts/<hostname>` with `cleanup = "zap"`, so unlisted apps are removed. `little-snitch`
 installs a kernel extension and can never be a Nix package.
 
 Nerd fonts, `1password-cli`, `ngrok` and `session-manager-plugin` moved to nixpkgs and are no
@@ -81,8 +81,8 @@ Skeleton written; **not yet validated** — Nix is not installed on this machine
 has been evaluated. Gates, in order:
 
 1. `nix flake check`
-2. `darwin-rebuild build --flake .#dj-mac` — compiles, **changes nothing**
-3. Docker: provision `.#dj-linux` in a clean Debian container; assert a silent interactive shell
+2. `darwin-rebuild build --flake  .   # hostname auto-selects` — compiles, **changes nothing**
+3. Docker: provision `.#linux-generic` in a clean Debian container; assert a silent interactive shell
 4. `darwin-rebuild switch`
 
 ### Known gaps

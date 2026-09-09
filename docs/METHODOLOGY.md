@@ -148,8 +148,8 @@ brew.** Homebrew runs with `cleanup = "zap"`, so a cask exists only while a
 | add/change an alias or shell function | edit `dotfiles/.zsh/*.zsh` — live immediately |
 | tweak nvim | edit `dotfiles/.config/nvim/` — live immediately |
 | add a CLI tool | add to `home/packages.nix` → `just switch` |
-| add a GUI app | add cask in `hosts/dj-mac/default.nix` → `just switch` |
+| add a GUI app | add cask in `hosts/<hostname>/default.nix` → `just switch` |
 | change git/tmux/starship/ghostty config | edit the module in `home/` → `just switch` |
-| change a macOS default | `hosts/dj-mac/default.nix` → `just switch` |
+| change a macOS default | `hosts/<hostname>/default.nix` → `just switch` |
 | undo any of the above | `just rollback` |
 | update everything | `just update && just build && just diff` → `just switch` |

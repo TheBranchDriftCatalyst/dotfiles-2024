@@ -6,7 +6,7 @@
 # system keychain / gh, never a config file.
 { pkgs, lib, config, ... }:
 
-let id = config.catalyst.identity; in
+let g = config.catalyst.git; in
 
 {
   programs.git = {
@@ -15,13 +15,13 @@ let id = config.catalyst.identity; in
 
 
 
-    # The includeIf condition is what keeps identities separated per-repo;
-    # the persona options only supply the VALUES. work.email = null turns
-    # the split off entirely on single-identity machines.
-    includes = lib.optional (id.work.email != null) {
-      condition = "gitdir:${id.work.dir}";
-      contents.user.email = id.work.email;
-    };
+    # One includeIf per declared context — identity follows the DIRECTORY,
+    # never the machine. The mechanism is git's own conditional include;
+    # contexts.nix only supplies the values.
+    includes = lib.mapAttrsToList (_: c: {
+      condition = "gitdir:${c.dir}";
+      contents = { user.email = c.email; } // c.extraConfig;
+    }) g.contexts;
 
 
     ignores = [
@@ -33,8 +33,8 @@ let id = config.catalyst.identity; in
 
     # HM renamed userName/userEmail/extraConfig into `settings`.
     settings = {
-      user.name = id.name;
-      user.email = id.email;   # persona-defined (home/theme.nix options)
+      user.name = g.name;
+      user.email = g.email;   # base identity (home/contexts.nix)
       init.defaultBranch = "main";
       push.autoSetupRemote = true;
       pull.rebase = true;

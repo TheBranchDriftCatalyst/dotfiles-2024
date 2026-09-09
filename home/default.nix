@@ -8,6 +8,7 @@
   # Platform modules are attached at the flake level instead.
   imports = [
     ./theme.nix
+    ./contexts.nix
     ./packages.nix
     ./zsh.nix
     ./git.nix

@@ -3,8 +3,8 @@
 #
 # NOTE: nixpkgs' ghostty is Linux-only; the macOS build needs Xcode and ships
 # as a signed app. So on darwin the BINARY comes from a Homebrew cask (see
-# hosts/dj-mac) while the CONFIG is still managed here — declarative either way.
-{ pkgs, lib, ... }:
+# the host config) while the CONFIG is still managed here — declarative either way.
+{ pkgs, ... }:
 
 {
   programs.ghostty = {

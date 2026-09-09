@@ -10,8 +10,8 @@ check(){ d="$1"; shift; if "$@" >/dev/null 2>&1; then ok "$d"; else bad "$d"; fi
 
 # Docker on Apple Silicon gives linux/arm64 — pick the matching output.
 case "$(uname -m)" in
-  aarch64|arm64) CFG="dj-linux-arm" ;;
-  *)             CFG="dj-linux" ;;
+  aarch64|arm64) CFG="linux-generic-arm" ;;
+  *)             CFG="linux-generic" ;;
 esac
 echo "══ target: .#homeConfigurations.${CFG} ($(uname -m)) ══"
 

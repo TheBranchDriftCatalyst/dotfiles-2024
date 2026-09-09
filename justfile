@@ -7,7 +7,8 @@
 
 set shell := ["bash", "-uc"]
 
-host := if os() == "macos" { "dj-mac" } else if arch() == "aarch64" { "dj-linux-arm" } else { "dj-linux" }
+# darwin configs are named by real hostname; linux targets are generic.
+host := if os() == "macos" { `hostname -s` } else if arch() == "aarch64" { "linux-generic-arm" } else { "linux-generic" }
 image := "catalyst-dotfiles-nix"
 
 default:

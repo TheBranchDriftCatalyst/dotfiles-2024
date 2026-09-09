@@ -12,6 +12,12 @@
 
   users.users.dj.home = "/Users/dj";
 
+  # Declared hostname — this machine had drifted into three conflicting
+  # names (teakbookM5DJ / takbookM5 / DJTeakbook). One name, everywhere,
+  # and darwin-rebuild's hostname-based config auto-selection becomes
+  # deterministic: `darwin-rebuild switch --flake .` needs no #target.
+  networking.hostName = "teakbookM5DJ";
+
   # Determinate Nix manages the daemon and nix.conf itself (flakes are on by
   # default there); nix-darwin must not fight it — its native Nix management
   # aborts activation when determinate-nixd is detected.
