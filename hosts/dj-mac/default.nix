@@ -42,6 +42,17 @@
     dock = {
       autohide = true;
       show-recents = false;
+      # Declared dock = the ONLY pinned apps. Everything Apple ships pinned
+      # (Safari, Messages, Mail, Maps, Photos, TV, News…) is removed on
+      # switch. Add/remove lines here, not by dragging — a switch resets it.
+      persistent-apps = [
+        "/Applications/Ghostty.app"
+        "/Applications/Visual Studio Code.app"
+        "/Applications/Firefox.app"
+        "/Applications/Obsidian.app"
+        "/Applications/Spotify.app"
+        "/System/Applications/System Settings.app"
+      ];
     };
 
     screencapture = {
