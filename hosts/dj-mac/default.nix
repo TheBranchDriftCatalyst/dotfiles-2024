@@ -15,10 +15,10 @@
   # dock/finder defaults, screencapture) apply to this user.
   system.primaryUser = "dj";
 
-  nix.settings = {
-    experimental-features = [ "nix-command" "flakes" ];
-    trusted-users = [ "root" "dj" ];
-  };
+  # Determinate Nix manages the daemon and nix.conf itself (flakes are on by
+  # default there); nix-darwin must not fight it — its native Nix management
+  # aborts activation when determinate-nixd is detected.
+  nix.enable = false;
 
   programs.zsh.enable = true;   # ensure /etc/zshrc sources the nix profile
 
