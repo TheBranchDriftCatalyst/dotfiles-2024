@@ -12,6 +12,7 @@
     ./git.nix
     ./tmux.nix
     ./starship.nix
+    ./mise.nix
     ./neovim.nix
     ./catalyst.nix
     ./ghostty.nix

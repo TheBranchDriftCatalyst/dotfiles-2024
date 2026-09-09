@@ -13,6 +13,12 @@ let
   mkLive = config.lib.file.mkOutOfStoreSymlink;
 in
 {
+  # Payload configs the old dotbot base profile linked; static, so pure store.
+  xdg.configFile."gomi".source = ../dotfiles/.config/gomi;
+  xdg.configFile."enhancd".source = ../dotfiles/.config/enhancd;
+  xdg.configFile."gh-dash".source = ../dotfiles/.config/gh-dash;
+  xdg.configFile."zsh".source = ../dotfiles/.config/zsh;   # zsh-abbr abbreviations
+
   # Link each file INDIVIDUALLY so ~/.zsh stays a real directory — HM itself
   # installs plugins under ~/.zsh/plugins/, and a whole-directory symlink made
   # those writes land outside $HOME (same failure shape as the old afx#40 bug).
