@@ -23,8 +23,8 @@ in
         fi
       }
       $DRY_RUN_CMD mkdir -p ${devspace}/catalyst
-      # _clone "${devspace}/catalyst/@cli-tools" "https://github.com/TheBranchDriftCatalyst/cli-tools.git"
-      # _clone "${devspace}/catalyst/@machines"  "https://github.com/TheBranchDriftCatalyst/machines.git"
-      # _clone "${devspace}/catalyst/@secrets"   "https://github.com/TheBranchDriftCatalyst/secrets.git"
+      _clone "${devspace}/catalyst/@cli-tools" "https://github.com/TheBranchDriftCatalyst/cli-tools.git"
+      _clone "${devspace}/catalyst/@machines"  "https://github.com/TheBranchDriftCatalyst/machines.git"
+      _clone "${devspace}/catalyst/@secrets"   "https://github.com/TheBranchDriftCatalyst/secrets.git"
     '';
 }
