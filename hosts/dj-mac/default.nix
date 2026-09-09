@@ -62,8 +62,13 @@
       # complete: "uninstall" (remove undeclared, keep their data) or "zap"
       # (remove + purge app data — deletes trial installs on every switch).
       cleanup = "none";
-      autoUpdate = false;
-      upgrade = false;
+      # Every switch also refreshes brew's index and upgrades outdated casks.
+      # Trade-off, chosen deliberately: switches are slower and may change
+      # apps beyond the config diff, but casks never drift stale. Flip both
+      # to false if a config-only switch surprising you with an app upgrade
+      # ever bites.
+      autoUpdate = true;
+      upgrade = true;
     };
 
     # NOT docker — Docker Desktop is replaced by colima (home/darwin.nix);
