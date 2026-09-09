@@ -57,7 +57,11 @@
   homebrew = {
     enable = true;
     onActivation = {
-      cleanup = "zap";
+      # "none": casks in this list get installed, but nothing undeclared is
+      # ever removed — brew can drift. Ratchet back up when the list feels
+      # complete: "uninstall" (remove undeclared, keep their data) or "zap"
+      # (remove + purge app data — deletes trial installs on every switch).
+      cleanup = "none";
       autoUpdate = false;
       upgrade = false;
     };
