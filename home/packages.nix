@@ -18,6 +18,8 @@
     lazygit gh ghq git-lfs difftastic
     colordiff diff-so-fancy git-open
     shellcheck shfmt
+    gitleaks        # secret scanning — wired into .githooks/pre-commit
+    statix deadnix  # nix linting (anti-patterns / dead code)
 
     # ── shell UX ─────────────────────────────────────────────────────────
     fzy zoxide gomi

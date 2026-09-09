@@ -11,6 +11,7 @@
 # WHAT IT CANNOT PROVE
 #   darwinConfigurations — nix-darwin requires macOS. `darwin-rebuild build`
 #   on the Mac is the corresponding gate for that half.
+#   Works on last install on 09/09/2026
 #
 # Non-root user with a real $HOME, because home-manager activation against
 # root is not what we ship.

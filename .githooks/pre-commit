@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Blocks the commit on: secrets, oversized files, conflict markers, nix
+# anti-patterns/dead code, shell errors.
+# Registered via `git config core.hooksPath .githooks` (bootstrap does this).
+# False positive? `git commit --no-verify` — sparingly; the scan re-runs in
+# anyone's clone.
+set -uo pipefail
+
+fail=0
+say() { printf '\033[0;31m✖ %s\033[0m\n' "$*"; fail=1; }
+ok()  { printf '\033[0;32m✔ %s\033[0m\n' "$*"; }
+
+staged() { git diff --cached --name-only --diff-filter=ACM; }
+
+# ── 1. secrets — non-negotiable; falls back to nix run pre-switch ────────────
+if command -v gitleaks >/dev/null 2>&1; then
+  GL=(gitleaks)
+elif command -v nix >/dev/null 2>&1; then
+  GL=(nix run nixpkgs#gitleaks --)
+else
+  GL=()
+fi
+if [ "${#GL[@]}" -gt 0 ]; then
+  if "${GL[@]}" protect --staged --no-banner --redact >/tmp/gitleaks-hook.log 2>&1; then
+    ok "gitleaks: no secrets in staged changes"
+  else
+    tail -15 /tmp/gitleaks-hook.log
+    say "gitleaks: staged changes look like they contain a secret — COMMIT BLOCKED"
+  fi
+else
+  say "no gitleaks and no nix — refusing to commit unscanned"
+fi
+
+# ── 2. large files — this repo once carried 39MB of SQLite caches ────────────
+while IFS= read -r f; do
+  [ -f "$f" ] || continue
+  sz=$(wc -c < "$f" | tr -d ' ')
+  if [ "$sz" -gt 1048576 ]; then
+    say "large file staged: $f ($((sz / 1048576)) MB) — binaries/caches don't belong here"
+  fi
+done < <(staged)
+[ "$fail" -eq 0 ] && ok "no oversized files"
+
+# ── 3. merge-conflict markers ────────────────────────────────────────────────
+if staged | xargs grep -lE '^(<{7}|={7}|>{7})( |$)' 2>/dev/null | grep -q .; then
+  staged | xargs grep -lE '^(<{7}|={7}|>{7})( |$)' 2>/dev/null | sed 's/^/    /'
+  say "merge-conflict markers in staged files"
+fi
+
+# ── 4. nix: anti-patterns + dead code + format (staged .nix only) ────────────
+staged_nix=$(staged | grep '\.nix$' || true)
+if [ -n "$staged_nix" ]; then
+  if command -v statix >/dev/null 2>&1; then
+    out=$(echo "$staged_nix" | xargs -I{} statix check {} 2>/dev/null || true)
+    if [ -n "$out" ]; then printf '%s\n' "$out" | head -20; say "statix: nix anti-patterns"; else ok "statix clean"; fi
+  fi
+  if command -v deadnix >/dev/null 2>&1; then
+    out=$(echo "$staged_nix" | xargs deadnix --fail 2>/dev/null || true)
+    if [ -n "$out" ]; then printf '%s\n' "$out" | head -20; say "deadnix: unused bindings"; else ok "deadnix clean"; fi
+  fi
+fi
+
+# ── 5. shellcheck (staged shell files, errors only) ──────────────────────────
+staged_sh=$(staged | grep -E '\.(sh|bash)$|^bootstrap\.sh$|^\.githooks/' || true)
+if [ -n "$staged_sh" ] && command -v shellcheck >/dev/null 2>&1; then
+  if echo "$staged_sh" | xargs shellcheck -S error 2>/dev/null; then
+    ok "shellcheck clean"
+  else
+    say "shellcheck: errors in staged shell files"
+  fi
+fi
+
+if [ "$fail" -ne 0 ]; then
+  printf '\n\033[0;31m══ COMMIT BLOCKED ══\033[0m  fix the above (or --no-verify for a false positive)\n'
+fi
+exit "$fail"

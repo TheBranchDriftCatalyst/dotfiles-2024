@@ -121,6 +121,10 @@ else
   git clone --branch "$BRANCH" "$REPO_URL" "$REPO_DIR"
 fi
 
+# secret-scanning + lint hooks — the pre-commit BLOCKS commits with secrets
+git -C "$REPO_DIR" config core.hooksPath .githooks \
+  && ok "git hooks registered (.githooks — gitleaks pre-commit)"
+
 # ── 4. build ─────────────────────────────────────────────────────────────────
 # Compiling the full configuration changes NOTHING on the machine — it only
 # proves the config is sound and downloads what a switch would need.
