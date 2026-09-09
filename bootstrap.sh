@@ -7,6 +7,11 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/TheBranchDriftCatalyst/dotfiles-2024/nix-next/bootstrap.sh | bash
 #
+# THE single button. From bare metal it: installs Xcode CLT + Homebrew
+# (macOS), installs Determinate Nix, clones this repo, COMPILES the full
+# configuration (changing nothing), then asks ONCE before activating.
+#   --switch / BOOTSTRAP_SWITCH=1   skip the question (fully unattended)
+#
 # Idempotent: every step checks before acting, so re-running is safe.
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
@@ -107,30 +112,60 @@ else
   git clone --branch "$BRANCH" "$REPO_URL" "$REPO_DIR"
 fi
 
-# ── 4. what to run next ──────────────────────────────────────────────────────
-step "4. next"
+# ── 4. build ─────────────────────────────────────────────────────────────────
+# Compiling the full configuration changes NOTHING on the machine — it only
+# proves the config is sound and downloads what a switch would need.
+step "4. build (changes nothing)"
 
-cat <<EOF
+cd "$REPO_DIR"
 
-  ${G}Layer 0 complete.${N} Everything from here is declarative.
+case "$OS" in
+  Darwin) TARGET="dj-mac" ;;
+  Linux)  [ "$ARCH" = "aarch64" ] && TARGET="dj-linux-arm" || TARGET="dj-linux" ;;
+esac
 
-  ${D}# see exactly what would change — builds, changes NOTHING${N}
-  cd $REPO_DIR
-EOF
-
+info "building .#${TARGET} — first run downloads a lot; go get coffee…"
 if [ "$OS" = "Darwin" ]; then
-cat <<EOF
-  nix run nix-darwin -- build --flake .#dj-mac
-
-  ${D}# then, when you're happy:${N}
-  sudo nix run nix-darwin -- switch --flake .#dj-mac
-EOF
+  nix run nix-darwin/master#darwin-rebuild -- build --flake ".#${TARGET}"
 else
-cat <<EOF
-  nix build .#homeConfigurations.dj-linux${ARCH:+$([ "$ARCH" = aarch64 ] && echo -arm)}.activationPackage
-
-  ${D}# then, when you're happy:${N}
-  nix run home-manager/master -- switch --flake .#dj-linux
-EOF
+  nix build ".#homeConfigurations.${TARGET}.activationPackage"
 fi
-echo
+ok "configuration compiled — nothing on this machine has changed yet"
+
+# ── 5. switch ────────────────────────────────────────────────────────────────
+# The ONLY gate. --switch (or BOOTSTRAP_SWITCH=1) skips the question for a
+# truly unattended run; otherwise one keypress decides.
+step "5. activate"
+
+do_switch=0
+case "''${1:-}" in --switch) do_switch=1 ;; esac
+[ "''${BOOTSTRAP_SWITCH:-0}" = "1" ] && do_switch=1
+
+if [ "$do_switch" -eq 0 ] && [ -t 0 ]; then
+  printf '%s?%s Activate now? This links dotfiles, applies macOS defaults, and\n' "$B" "$N"
+  printf '  (on macOS) syncs Homebrew casks — removing casks NOT in the list. [y/N] '
+  read -r ans
+  case "$ans" in [Yy]*) do_switch=1 ;; esac
+fi
+
+if [ "$do_switch" -eq 1 ]; then
+  if [ "$OS" = "Darwin" ]; then
+    sudo nix run nix-darwin/master#darwin-rebuild -- switch --flake ".#${TARGET}"
+  else
+    nix run home-manager/master -- switch --flake ".#${TARGET}"
+  fi
+  ok "activated — open a NEW terminal to get the full environment"
+else
+  cat <<EOF
+
+  ${G}Built and ready.${N} Nothing was changed. To activate later:
+
+      cd $REPO_DIR
+EOF
+  if [ "$OS" = "Darwin" ]; then
+    echo "      sudo nix run nix-darwin/master#darwin-rebuild -- switch --flake .#${TARGET}"
+  else
+    echo "      nix run home-manager/master -- switch --flake .#${TARGET}"
+  fi
+  echo
+fi
