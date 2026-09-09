@@ -21,7 +21,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, nix-darwin, sops-nix, ... }@inputs:
+  outputs = { nixpkgs, home-manager, nix-darwin, sops-nix, ... }@inputs:
     let
       # Where this repo lives. Everything that needs a live (editable) symlink
       # resolves through here — never a hardcoded /Users/<name>.
@@ -53,7 +53,7 @@
               useGlobalPkgs = true;
               useUserPackages = true;
               extraSpecialArgs = mkArgs "aarch64-darwin";
-              users.dj.imports = [ ./home ./home/darwin.nix ];
+              users.dj.imports = [ ./home ./home/darwin.nix ./hosts/dj-mac/home.nix ];
               # Move aside any pre-existing file rather than failing activation.
               backupFileExtension = "hm-bak";
             };

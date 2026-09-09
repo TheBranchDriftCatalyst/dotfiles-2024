@@ -6,6 +6,8 @@
 # system keychain / gh, never a config file.
 { pkgs, lib, config, ... }:
 
+let id = config.catalyst.identity; in
+
 {
   programs.git = {
     enable = true;
@@ -13,12 +15,13 @@
 
 
 
-    # Work identity applies only inside the work tree — no global override,
-    # so a personal repo can never be committed with the employer address.
-    includes = [{
-      condition = "gitdir:~/catalyst-devspace/";
-      contents.user.email = "h.daniels@protecht.com";
-    }];
+    # The includeIf condition is what keeps identities separated per-repo;
+    # the persona options only supply the VALUES. work.email = null turns
+    # the split off entirely on single-identity machines.
+    includes = lib.optional (id.work.email != null) {
+      condition = "gitdir:${id.work.dir}";
+      contents.user.email = id.work.email;
+    };
 
 
     ignores = [
@@ -30,8 +33,8 @@
 
     # HM renamed userName/userEmail/extraConfig into `settings`.
     settings = {
-      user.name = "DJ Daniels";
-      user.email = "djdanielsh@gmail.com";
+      user.name = id.name;
+      user.email = id.email;   # persona-defined (home/theme.nix options)
       init.defaultBranch = "main";
       push.autoSetupRemote = true;
       pull.rebase = true;

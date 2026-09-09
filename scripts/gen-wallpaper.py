@@ -5,7 +5,10 @@ Pure stdlib (zlib + struct): no PIL, no dependencies, deterministic.
 The wallpaper is committed as *code* — the repo's pre-commit hook blocks
 binaries >1MB, and a generator beats a blob anyway.
 
-  gen-wallpaper.py [out.png] [WxH]     default: wallpaper.png 3456x2234
+  gen-wallpaper.py [out.png] [WxH] [palette]
+    palette: 7 comma-separated hex colors —
+             deep,mid,glow,sunTop,sunBot,grid,accent
+    default: the pink synthwave set (see PALETTE below)
 """
 import struct, sys, zlib
 
@@ -14,6 +17,15 @@ OUT = sys.argv[1] if len(sys.argv) > 1 else "wallpaper.png"
 if len(sys.argv) > 2:
     W, H = (int(x) for x in sys.argv[2].split("x"))
 
+def hex2rgb(h):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+
+PALETTE = "0d0221,2b0c4a,ff2e97,ffef00,ff2e97,ff2e97,5ee7ff"
+if len(sys.argv) > 3:
+    PALETTE = sys.argv[3]
+DEEP, MID, GLOW, SUN_TOP, SUN_BOT, GRIDC, ACCENT = (hex2rgb(c) for c in PALETTE.split(","))
+
 HORIZON = int(H * 0.62)
 CX, CR = W // 2, int(H * 0.26)          # sun center-x, radius
 CY = HORIZON - int(CR * 0.35)           # sun sits low, clipped by horizon
@@ -21,14 +33,6 @@ CY = HORIZON - int(CR * 0.35)           # sun sits low, clipped by horizon
 def lerp(a, b, t):
     return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
-# palette — same neons as ghostty/starship
-DEEP    = (13, 2, 33)      # #0d0221
-VIOLET  = (43, 12, 74)
-PINK    = (255, 46, 151)   # #ff2e97
-SUN_TOP = (255, 239, 0)    # #ffef00
-SUN_BOT = (255, 46, 151)
-GRIDC   = (255, 46, 151)
-CYAN    = (94, 231, 255)   # #5ee7ff
 
 rows = []
 for y in range(H):
@@ -36,7 +40,7 @@ for y in range(H):
     if y < HORIZON:
         # sky: deep -> violet -> pink glow at horizon
         t = y / HORIZON
-        sky = lerp(DEEP, VIOLET, t) if t < 0.7 else lerp(VIOLET, PINK, (t - 0.7) / 0.3 * 0.55)
+        sky = lerp(DEEP, MID, t) if t < 0.7 else lerp(MID, GLOW, (t - 0.7) / 0.3 * 0.55)
         # deterministic star field (hash-based, upper sky only)
         for x in range(W):
             r, g, b = sky
@@ -58,9 +62,9 @@ for y in range(H):
     else:
         # floor: perspective grid racing to the horizon
         t = (y - HORIZON) / (H - HORIZON)          # 0 at horizon -> 1 at bottom
-        base = lerp((26, 4, 46), DEEP, t)
+        base = lerp(lerp(MID, DEEP, 0.55), DEEP, t)
         if t < 0.05:
-            base = lerp(PINK, base, 0.55 + 9.0 * t)
+            base = lerp(GLOW, base, 0.55 + 9.0 * t)
         # horizontal lines: spacing grows with distance from horizon
         z = 1.0 / (t + 0.02)
         # haze band at the horizon: grid lines alias into noise at tiny
@@ -76,7 +80,7 @@ for y in range(H):
             vline = (not haze) and (int(v) % 420) < 6
             if hline or vline:
                 glow = 0.85 if hline else 0.7
-                c = GRIDC if (x + y) % 97 else CYAN
+                c = GRIDC if (x + y) % 97 else ACCENT
                 r, g, b = lerp(base, c, glow * (0.35 + 0.65 * t))
             row += bytes((r, g, b))
     rows.append(bytes(row))

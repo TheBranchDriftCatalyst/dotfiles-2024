@@ -2,7 +2,14 @@
 { pkgs, lib, config, dotfilesRepo, ... }:
 let
   repo = "${config.home.homeDirectory}/${dotfilesRepo}";
-  wallpaper = "${config.home.homeDirectory}/Pictures/catalyst-synthwave.png";
+  pal = config.catalyst.palette;
+  paletteStr = lib.concatStringsSep "," (map (lib.removePrefix "#") [
+    pal.deep pal.mid pal.glow pal.sunTop pal.sunBot pal.grid pal.accent
+  ]);
+  # Filename carries the palette hash: changing the palette in a host
+  # config automatically renders a fresh wallpaper on the next switch.
+  palHash = builtins.substring 0 8 (builtins.hashString "sha256" paletteStr);
+  wallpaper = "${config.home.homeDirectory}/Pictures/catalyst-${palHash}.png";
 in
 {
   # Container runtime: colima (replaces Docker Desktop, which self-destructed
@@ -29,7 +36,7 @@ in
         echo "wallpaper: generating…"
         $DRY_RUN_CMD mkdir -p "$(dirname "${wallpaper}")"
         $DRY_RUN_CMD ${pkgs.python3}/bin/python3 \
-          "${repo}/scripts/gen-wallpaper.py" "${wallpaper}" 3456x2234 \
+          "${repo}/scripts/gen-wallpaper.py" "${wallpaper}" 3456x2234 "${paletteStr}" \
           || echo "wallpaper: ✖ generation failed"
       fi
       if [ -f "${wallpaper}" ]; then

@@ -7,6 +7,7 @@
   # causes infinite recursion (pkgs is a module arg, resolved after imports).
   # Platform modules are attached at the flake level instead.
   imports = [
+    ./theme.nix
     ./packages.nix
     ./zsh.nix
     ./git.nix
