@@ -11,6 +11,10 @@
 
   users.users.dj.home = "/Users/dj";
 
+  # nix-darwin activation runs as root now; user-scoped options (homebrew,
+  # dock/finder defaults, screencapture) apply to this user.
+  system.primaryUser = "dj";
+
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];
     trusted-users = [ "root" "dj" ];
