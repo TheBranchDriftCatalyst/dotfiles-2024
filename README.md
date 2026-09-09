@@ -10,6 +10,10 @@ darwin-rebuild switch --flake .#dj-mac
 home-manager switch --flake .#dj-linux
 ```
 
+**New here?** Read [docs/METHODOLOGY.md](docs/METHODOLOGY.md) — how the store,
+symlink farms, PATH, and generations actually work, and how the dotfiles ride
+on them (generated-vs-live, the zsh startup order, edit workflows).
+
 ## Why this exists
 
 The previous setup ran three package managers with overlapping responsibility —
