@@ -78,6 +78,15 @@ esac
 # ── 2. Nix ───────────────────────────────────────────────────────────────────
 step "2. Nix"
 
+# A rerun in a shell that hasn't sourced Nix's profile would wrongly re-invoke
+# the installer (harmless but noisy — it prints a scary "try uninstalling"
+# no-op message). Source the profile first so `has nix` sees an existing
+# install.
+if ! has nix && [ -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
+  # shellcheck disable=SC1091
+  . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+fi
+
 if has nix; then
   ok "nix $(nix --version)"
 else
