@@ -7,6 +7,9 @@ deletion candidate — one module/line each, nothing is load-bearing.**
 
 ## The rice stack (`hosts/teakbookM5DJ/rice.nix`)
 
+> New to tiling? **[RICE-GUIDE.md](RICE-GUIDE.md)** is the full tutorial:
+> the mental model, every hotkey, customization recipes, bar anatomy.
+
 | Thing | What | Daily driver moves |
 |---|---|---|
 | **AeroSpace** | i3-style tiling WM, no SIP hacks | `alt-hjkl` focus · `alt-shift-hjkl` move · `alt-1..9` workspace · `alt-shift-1..9` send · `alt-tab` last workspace · `alt-f` fullscreen · `alt-r` resize mode · `alt-slash` tiles / `alt-comma` accordion · `alt-shift-space` float |
