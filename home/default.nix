@@ -3,7 +3,7 @@
 { pkgs, lib, ... }:
 
 {
-  # NOTE: imports must be STATIC. Deriving them from pkgs.stdenv.isDarwin
+  # NOTE: imports must be STATIC. Deriving them from stdenv.hostPlatform.isDarwin
   # causes infinite recursion (pkgs is a module arg, resolved after imports).
   # Platform modules are attached at the flake level instead.
   imports = [
@@ -25,13 +25,19 @@
 
   home.username = lib.mkDefault "dj";
   home.homeDirectory = lib.mkDefault (
-    if pkgs.stdenv.isDarwin then "/Users/dj" else "/home/dj"
+    if pkgs.stdenv.hostPlatform.isDarwin then "/Users/dj" else "/home/dj"
   );
 
   # Bump deliberately after reading the release notes; it is NOT "latest".
   home.stateVersion = "24.11";
 
   programs.home-manager.enable = true;
+
+  # HM's options manpage build rides nixpkgs' make-options-doc, which
+  # triggers the "builtins.derivation ... options.json without a proper
+  # context" eval warning on every build. Options get looked up online /
+  # in source anyway — drop the manpage, drop the warning.
+  manual.manpages.enable = false;
 
   home.sessionVariables = {
     LANG = "en_US.UTF-8";

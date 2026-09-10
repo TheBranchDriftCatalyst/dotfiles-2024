@@ -10,9 +10,28 @@ let
   # last segment of the spec's repo URL — case included ("NvChad", "LuaSnip").
   # Keys must cover every spec NvChad imports plus lazy's spec for itself; a
   # missing key surfaces as "plugin not installed" at startup, never a clone.
+  # nixpkgs' nvchad still declares nvim-treesitter-legacy as a dependency
+  # (deprecated, becomes an eval ERROR in 26.11). Runtime plugins come from
+  # lazy's dev.path below — the nix-level dep list only shapes the closure —
+  # so restate it with main-branch treesitter. Don't reference
+  # old.dependencies here: forcing it would evaluate the legacy attr and
+  # re-emit the warning this exists to kill.
+  nvchadFixed = pkgs.vimPlugins.nvchad.overrideAttrs (_: {
+    dependencies = with pkgs.vimPlugins; [
+      gitsigns-nvim
+      luasnip
+      mason-nvim
+      nvim-cmp
+      nvim-lspconfig
+      telescope-nvim
+      nvim-treesitter
+      nvchad-ui
+    ];
+  });
+
   plugins = with pkgs.vimPlugins; {
     "lazy.nvim" = lazy-nvim;
-    "NvChad" = nvchad;
+    "NvChad" = nvchadFixed;
     "plenary.nvim" = plenary-nvim;
     "base46" = base46;
     "ui" = nvchad-ui;

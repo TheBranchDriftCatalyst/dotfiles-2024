@@ -21,6 +21,9 @@ let p = config.catalyst.palette; in
   programs.yazi = {
     enable = true;
     enableZshIntegration = true; # `yy` = cd-on-quit wrapper
+    # explicit: HM's default flips to "y" at stateVersion 26.05 (and warns
+    # until then). "yy" is what the docs teach — pinned on purpose.
+    shellWrapperName = "yy";
     theme.mgr = {
       hovered = { bg = p.mid; bold = true; };
       cwd = { fg = p.accent; bold = true; };

@@ -27,6 +27,12 @@
 
   programs.zsh.enable = true;   # ensure /etc/zshrc sources the nix profile
 
+  # nix-darwin's options manual builds an options.json via builtins.derivation
+  # with an uncontexted nixpkgs path — upstream bug, warns on every eval.
+  # The manpages aren't used here (options get looked up in the source /
+  # online), so drop the docs build and the warning with it.
+  documentation.enable = false;
+
   # ── macOS defaults ────────────────────────────────────────────────────
   system = {
     stateVersion = 5;

@@ -11,3 +11,6 @@ result-*
 
 # OS noise
 .DS_Store
+
+# root-owned droppings from sudo darwin-rebuild/nh runs in-repo
+.cache/

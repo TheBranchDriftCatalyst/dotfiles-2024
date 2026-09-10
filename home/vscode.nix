@@ -29,7 +29,7 @@ let
   ];
 
   settingsPath =
-    if pkgs.stdenv.isDarwin
+    if pkgs.stdenv.hostPlatform.isDarwin
     then "Library/Application Support/Code/User/settings.json"
     else ".config/Code/User/settings.json";
 in
