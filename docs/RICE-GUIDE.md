@@ -30,6 +30,17 @@ workspace 2. `alt-tab` bounces between your two most-used workspaces.
 
 ## Hotkey cheat sheet (our bindings)
 
+> **`alt` = the Option key (⌥)** — between Control and Command.
+>
+> Option is double-booked on this machine, deliberately: Ghostty sets
+> `macos-option-as-alt = true`, making ⌥ the **Meta** key for shell binds
+> inside the terminal. AeroSpace grabs its own combos at the system level
+> *first*, so ⌥+hjkl / ⌥+1..9 / etc. never reach the shell — every ⌥ combo
+> AeroSpace does NOT bind still works as Meta in the terminal. If a shell
+> keybind you care about ever "stops working", it's an AeroSpace binding
+> shadowing it: rebind one side (aerospace: `rice.nix`; shell:
+> `home/zsh/*.zsh` / `home/dotfiles/tmux.conf`).
+
 ### Focus & movement
 | Keys | Does |
 |---|---|
