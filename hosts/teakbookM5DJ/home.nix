@@ -10,14 +10,7 @@ _:
     orgSubdir = "catalyst";
   };
 
-  catalyst.palette = {
-    deep = "#010b06";     # near-black green
-    mid = "#06331c";
-    glow = "#39ff14";     # neon green horizon/glow
-    sunTop = "#d4ff3f";   # acid yellow-green
-    sunBot = "#00ff87";
-    grid = "#39ff14";
-    accent = "#5ee7ff";   # cyan counterpoint
-    text = "TeakMaXXing";
-  };
+  # values live in palette.nix (plain attrset) so rice.nix — a darwin-layer
+  # module that can't see HM config — colors the bar/borders from the same file
+  catalyst.palette = import ./palette.nix;
 }

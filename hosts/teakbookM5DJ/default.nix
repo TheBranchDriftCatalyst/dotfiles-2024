@@ -5,6 +5,8 @@
 { pkgs, ... }:
 
 {
+  imports = [ ./rice.nix ];
+
   nixpkgs = {
     hostPlatform = "aarch64-darwin";
     config.allowUnfree = true;
