@@ -137,8 +137,17 @@
       # fpath must be extended BEFORE compinit runs (HM emits compinit around
       # order 550; mkOrder 400 lands ahead of it). Only vendored completion
       # left is _gomi — gomi ships none and can't generate one.
+      #
+      # NESTED one level on purpose: a bare "${./zsh/completions}" imports as
+      # a TOP-LEVEL store path, and compaudit audits an fpath dir's parent —
+      # which would be /nix/store itself, group-writable under Determinate
+      # Nix (drwxrwxr-t root:nixbld) → "insecure directories" prompt on every
+      # shell. Nesting makes the parent a read-only store path instead.
       (lib.mkOrder 400 ''
-        fpath=("${./zsh/completions}" $fpath)
+        fpath=("${pkgs.runCommand "zsh-vendored" { } ''
+          mkdir -p $out
+          cp -r ${./zsh/completions} $out/completions
+        ''}/completions" $fpath)
       '')
 
       (lib.mkAfter ''
