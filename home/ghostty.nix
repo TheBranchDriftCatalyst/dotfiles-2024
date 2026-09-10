@@ -4,7 +4,9 @@
 # NOTE: nixpkgs' ghostty is Linux-only; the macOS build needs Xcode and ships
 # as a signed app. So on darwin the BINARY comes from a Homebrew cask (see
 # the host config) while the CONFIG is still managed here — declarative either way.
-{ pkgs, ... }:
+{ pkgs, config, ... }:
+
+let p = config.catalyst.palette; in
 
 {
   programs.ghostty = {
@@ -34,11 +36,16 @@
 
       cursor-style = "block";
       cursor-style-blink = true;
-      cursor-color = "#ff2e97";           # synthwave hot pink
-      cursor-text = "#0d0221";
+      cursor-color = p.glow;              # the machine's neon (livery)
+      cursor-text = p.deep;
       selection-background = "#7b2fbe";   # neon purple sweep
       selection-foreground = "#f8f8f2";
       unfocused-split-opacity = 0.65;
+
+      # Ghostty has no plugin system (by design) — custom GLSL shaders are
+      # the extension point. This one is a restrained CRT pass; remove the
+      # line to disable.
+      custom-shader = "${./dotfiles/ghostty-crt.glsl}";
 
       shell-integration = "zsh";
       copy-on-select = true;

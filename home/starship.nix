@@ -8,8 +8,14 @@
 #   - kubernetes / time    were already disabled = true
 # The synthwave identity (🚀/💥, 🌴 branch, neon hex styles) is kept intact.
 #
+# Colors come from the machine LIVERY (catalyst.palette, theme.nix) — the
+# prompt glows green on teakbook, pink on default. Names are semantic
+# (primary/accent/alt/warn/surface), not color-literal, for that reason.
+#
 # Deploy: edit here → `just switch`.
-{ ... }:
+{ config, ... }:
+
+let p = config.catalyst.palette; in
 
 {
   programs.starship = {
@@ -35,13 +41,13 @@
       ];
       right_format = "$battery";
 
-      palette = "synthwave";
-      palettes.synthwave = {
-        neon_pink = "#ff2e97";
-        neon_cyan = "#5ee7ff";
-        neon_violet = "#9d6bff";
-        neon_yellow = "#ffef00";
-        surface = "#4a3b78";
+      palette = "livery";
+      palettes.livery = {
+        primary = p.glow;    # the machine's neon
+        inherit (p) accent;
+        alt = p.sunBot;
+        warn = p.sunTop;
+        surface = p.mid;
       };
 
       fill = {
@@ -53,10 +59,10 @@
       nix_shell = {
         symbol = "❄️ ";
         format = "[$symbol$state]($style) ";
-        style = "bold neon_cyan";
+        style = "bold accent";
         impure_msg = "[impure](bold red)";
-        pure_msg = "[pure](bold neon_cyan)";
-        unknown_msg = "[shell](bold neon_violet)";
+        pure_msg = "[pure](bold accent)";
+        unknown_msg = "[shell](bold alt)";
       };
 
       # 🔓 sudo credentials currently cached — know when you're hot
@@ -64,7 +70,7 @@
         disabled = false;
         symbol = "🔓 ";
         format = "[$symbol]($style)";
-        style = "bold neon_pink";
+        style = "bold primary";
       };
 
       # exit status with signal names (💥 says "failed", this says WHY)
@@ -81,7 +87,7 @@
         disabled = false;
         time_format = "%H:%M";
         format = "[$time]($style) ";
-        style = "fg:neon_violet";
+        style = "fg:alt";
       };
 
       character = {
@@ -94,7 +100,7 @@
         truncate_to_repo = true;
         truncation_symbol = "⚓/";
         format = "[$path]($style)[$read_only]($read_only_style) ";
-        style = "fg:neon_cyan bold";
+        style = "fg:accent bold";
         read_only = "🔒";
         read_only_style = "fg:red bold";
       };
@@ -113,12 +119,12 @@
       git_branch = {
         symbol = "🌴 ";
         format = "[$symbol$branch]($style) ";
-        style = "bold neon_pink";
+        style = "bold primary";
       };
 
       git_status = {
         format = "[($all_status$ahead_behind)]($style) ";
-        style = "fg:neon_pink bold";
+        style = "fg:primary bold";
         conflicted = "​⚔️​ \${count} ";
         ahead = "​⬆️​ \${count} ";
         behind = "​⬇️​ \${count} ";
@@ -143,14 +149,14 @@
         min_time = 2000;
         show_milliseconds = true;
         format = "[⌛ $duration]($style) ";
-        style = "fg:neon_yellow bold";
+        style = "fg:warn bold";
       };
 
       jobs = {
         threshold = 1;
         symbol = "✦";
         format = "[$symbol$number]($style) ";
-        style = "fg:neon_pink bold";
+        style = "fg:primary bold";
       };
 
       username = {
@@ -175,7 +181,7 @@
       docker_context = {
         symbol = "🐳 ";
         format = "via [$symbol$context]($style) ";
-        style = "bold neon_cyan";
+        style = "bold accent";
       };
 
       aws = {
@@ -201,7 +207,7 @@
         threshold = 2;              # only when nested — depth 1 is just life
         symbol = "🕳️ ";
         format = "[$symbol$shlvl]($style) ";
-        style = "bold neon_violet";
+        style = "bold alt";
       };
     };
   };

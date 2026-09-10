@@ -187,11 +187,6 @@
     ];
   };
 
-  programs.bat = {
-    enable = true;
-    config.theme = "OneHalfDark";
-  };
-
   programs.direnv = {
     enable = true;
     enableZshIntegration = true;

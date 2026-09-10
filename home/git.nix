@@ -15,6 +15,7 @@ let g = config.catalyst.git; in
 
 
 
+
     # One includeIf per declared context — identity follows the DIRECTORY,
     # never the machine. The mechanism is git's own conditional include;
     # contexts.nix only supplies the values. Ordering is load-bearing: git's
@@ -76,9 +77,10 @@ let g = config.catalyst.git; in
     enable = true;
     enableGitIntegration = true;
     options = {
-      navigate = true;
+      navigate = true;         # n/N jump between files in the pager
       line-numbers = true;
-      syntax-theme = "OneHalfDark";
+      side-by-side = true;
+      syntax-theme = "livery"; # the generated bat theme (cli.nix)
     };
   };
 

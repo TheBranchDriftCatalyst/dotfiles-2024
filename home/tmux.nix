@@ -10,7 +10,9 @@
 # namespace (set-clipboard covers it), the gte/gtj translate binds (functions
 # long gone), and the kube/gcp/wifi/battery status segments (those scripts
 # aren't packaged yet — README "known gaps").
-{ pkgs, ... }:
+{ pkgs, config, ... }:
+
+let p = config.catalyst.palette; in
 
 {
   programs.tmux = {
@@ -37,6 +39,16 @@
       # The old .tmux.conf hardcoded `default-shell /bin/zsh`, which under Nix
       # points at the system zsh rather than the one this config manages.
       set -g default-shell ${pkgs.zsh}/bin/zsh
+
+      # ── livery: status + borders follow catalyst.palette ────────────────
+      set -g status-style "bg=${p.deep},fg=${p.glow}"
+      setw -g window-status-current-style "fg=${p.deep},bg=${p.glow},bold"
+      setw -g window-status-style "fg=${p.accent}"
+      set -g pane-active-border-style "fg=${p.glow}"
+      set -g pane-border-style "fg=${p.mid}"
+      set -g message-style "bg=${p.mid},fg=${p.sunTop}"
+      set -g mode-style "bg=${p.mid},fg=${p.glow}"
+      set -g clock-mode-colour "${p.glow}"
 
     '' + builtins.readFile ./dotfiles/tmux.conf;
   };
