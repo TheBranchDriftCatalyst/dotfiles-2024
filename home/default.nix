@@ -20,6 +20,7 @@
     ./ghostty.nix
     ./vscode.nix
     ./claude.nix
+    ./cli.nix
   ];
 
   home.username = lib.mkDefault "dj";

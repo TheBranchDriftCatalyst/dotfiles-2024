@@ -41,7 +41,28 @@ diff: build
     nix run nixpkgs#nvd -- diff "$current" ./result
 
 # Activate. Run `just build` and `just diff` first.
+# Prefers nh (tree output + built-in nvd diff); falls back to the raw
+# rebuild if nh isn't installed yet (first bootstrap).
 switch:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+      if command -v nh >/dev/null; then
+        nh darwin switch .
+      else
+        sudo nix run nix-darwin -- switch --flake ".#{{host}}"
+      fi
+    else
+      if command -v nh >/dev/null; then
+        nh home switch . -c "{{host}}"
+      else
+        nix run home-manager/master -- switch --flake ".#{{host}}"
+      fi
+    fi
+
+# The raw activation path, bypassing nh — for when nh misbehaves
+# (it has a known silent-failure edge on darwin: nix-community/nh#233).
+switch-raw:
     #!/usr/bin/env bash
     set -euo pipefail
     if [[ "$(uname -s)" == "Darwin" ]]; then
@@ -67,8 +88,13 @@ update:
 gc:
     nix-collect-garbage --delete-older-than 30d
 
+# One formatter for the whole repo (treefmt: nixfmt + shfmt + stylua +
+# prettier). `just fmt-check` is the CI/no-write flavor.
 fmt:
-    nix run nixpkgs#nixfmt-rfc-style -- $(find . -name '*.nix' -not -path './.git/*')
+    nix fmt
+
+fmt-check:
+    nix fmt -- --ci
 
 # Register the repo's pre-commit gate (gitleaks + lint). Bootstrap does this
 # too; run it after any manual clone.

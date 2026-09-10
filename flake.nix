@@ -19,9 +19,24 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # weekly-prebuilt nix-index DB: command-not-found + comma, no local indexing
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # one `nix fmt` for the whole repo (nixfmt + shfmt + stylua + prettier)
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # trampoline .apps so nix-installed GUI apps index in Spotlight/Launchpad
+    mac-app-util.url = "github:hraban/mac-app-util";
   };
 
-  outputs = { nixpkgs, home-manager, nix-darwin, sops-nix, ... }@inputs:
+  outputs = { nixpkgs, home-manager, nix-darwin, sops-nix, nix-index-database, treefmt-nix, mac-app-util, ... }@inputs:
     let
       # Where this repo lives. Everything that needs a live (editable) symlink
       # resolves through here — never a hardcoded /Users/<name>.
@@ -48,13 +63,19 @@
         modules = [
           ./hosts/teakbookM5DJ
           sops-nix.darwinModules.sops
+          mac-app-util.darwinModules.default
           home-manager.darwinModules.home-manager
           {
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
               extraSpecialArgs = mkArgs "aarch64-darwin";
-              users.dj.imports = [ ./home ./home/darwin.nix ./hosts/teakbookM5DJ/home.nix ];
+              users.dj.imports = [
+                ./home
+                ./home/darwin.nix
+                ./hosts/teakbookM5DJ/home.nix
+                nix-index-database.homeModules.nix-index
+              ];
               # Move aside any pre-existing file rather than failing activation.
               backupFileExtension = "hm-bak";
             };
@@ -68,13 +89,25 @@
       homeConfigurations."linux-generic" = home-manager.lib.homeManagerConfiguration {
         pkgs = mkPkgs "x86_64-linux";
         extraSpecialArgs = mkArgs "x86_64-linux";
-        modules = [ ./home ./home/linux.nix ./hosts/linux-generic ];
+        modules = [ ./home ./home/linux.nix ./hosts/linux-generic nix-index-database.homeModules.nix-index ];
       };
 
       homeConfigurations."linux-generic-arm" = home-manager.lib.homeManagerConfiguration {
         pkgs = mkPkgs "aarch64-linux";
         extraSpecialArgs = mkArgs "aarch64-linux";
-        modules = [ ./home ./home/linux.nix ./hosts/linux-generic ];
+        modules = [ ./home ./home/linux.nix ./hosts/linux-generic nix-index-database.homeModules.nix-index ];
       };
+
+      # `nix fmt` formats the whole repo; `nix fmt -- --ci` checks.
+      formatter = nixpkgs.lib.genAttrs [ "aarch64-darwin" "x86_64-linux" "aarch64-linux" ] (system:
+        (treefmt-nix.lib.evalModule (mkPkgs system) {
+          projectRootFile = "flake.nix";
+          programs = {
+            nixfmt.enable = true;
+            shfmt.enable = true;
+            stylua.enable = true;
+            prettier.enable = true;
+          };
+        }).config.build.wrapper);
     };
 }

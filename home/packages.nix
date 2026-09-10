@@ -9,13 +9,16 @@
 {
   home.packages = with pkgs; [
     # ── modern CLI replacements ──────────────────────────────────────────
-    bat eza fd ripgrep delta tree sd grex
+    # (delta → programs.git.delta in git.nix; bat → programs.bat in cli.nix —
+    # configured, not just installed)
+    eza fd ripgrep tree sd grex
 
     # ── data wrangling ───────────────────────────────────────────────────
     jq yq-go fx gron xan jless   # xan = maintained xsv fork (xsv was dropped from nixpkgs)
 
     # ── git & code ───────────────────────────────────────────────────────
-    lazygit gh ghq git-lfs difftastic
+    # (lazygit moved to programs.lazygit in cli.nix)
+    gh ghq git-lfs difftastic
     colordiff diff-so-fancy git-open
     shellcheck shfmt
     gitleaks        # secret scanning — wired into .githooks/pre-commit
@@ -45,6 +48,7 @@
     just            # runs the repo justfile — the post-bootstrap control panel
     nvd             # generation diffs for `just diff`
     nix-output-monitor
+    nh              # nicer switch UX + `nh clean` GC — justfile `switch` uses it
 
     # ── fonts (these do NOT need a Homebrew cask) ────────────────────────
     nerd-fonts.hack
