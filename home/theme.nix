@@ -15,5 +15,10 @@
     sunBot = lib.mkOption { type = lib.types.str; default = "#ff2e97"; };
     grid = lib.mkOption { type = lib.types.str; default = "#ff2e97"; };
     accent = lib.mkOption { type = lib.types.str; default = "#5ee7ff"; };
+    text = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      description = "livery title overlaid on the wallpaper (rendered caps, chrome+glow)";
+    };
   };
 }

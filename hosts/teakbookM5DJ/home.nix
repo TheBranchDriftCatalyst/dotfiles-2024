@@ -11,5 +11,6 @@ _:
     sunBot = "#00ff87";
     grid = "#39ff14";
     accent = "#5ee7ff";   # cyan counterpoint
+    text = "TeakMaXXing";
   };
 }

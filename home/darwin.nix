@@ -8,7 +8,7 @@ let
   ]);
   # Filename carries the palette hash: changing the palette in a host
   # config automatically renders a fresh wallpaper on the next switch.
-  palHash = builtins.substring 0 8 (builtins.hashString "sha256" paletteStr);
+  palHash = builtins.substring 0 8 (builtins.hashString "sha256" (paletteStr + pal.text));
   wallpaper = "${config.home.homeDirectory}/Pictures/catalyst-${palHash}.png";
 in
 {
@@ -36,7 +36,7 @@ in
         echo "wallpaper: generating…"
         $DRY_RUN_CMD mkdir -p "$(dirname "${wallpaper}")"
         $DRY_RUN_CMD ${pkgs.python3}/bin/python3 \
-          "${repo}/scripts/gen-wallpaper.py" "${wallpaper}" 3456x2234 "${paletteStr}" \
+          "${repo}/scripts/gen-wallpaper.py" "${wallpaper}" 3456x2234 "${paletteStr}" "${pal.text}" \
           || echo "wallpaper: ✖ generation failed"
       fi
       if [ -f "${wallpaper}" ]; then
