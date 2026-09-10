@@ -34,10 +34,9 @@ RUN mkdir -p /home/${USER} && \
 USER ${USER}
 ENV USER=${USER}
 ENV HOME=/home/${USER}
-ENV DOTFILES=/home/${USER}/catalyst-devspace/catalyst/@dotfiles
+ENV DOTFILES=/home/${USER}/.dotfiles
 ENV NIX_CONFIG="experimental-features = nix-command flakes"
 
-RUN mkdir -p ${HOME}/catalyst-devspace/catalyst
 COPY --chown=${UID}:${UID} . ${DOTFILES}
 
 WORKDIR ${DOTFILES}

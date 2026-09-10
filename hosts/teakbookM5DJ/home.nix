@@ -1,8 +1,15 @@
-# Livery for teakbookM5DJ — the machine's look, nothing else.
-# (Identity is directory-scoped and machine-agnostic: home/contexts.nix.)
+# Livery + devspace naming for teakbookM5DJ.
+# (Identity stays directory-scoped and machine-agnostic in home/contexts.nix —
+# the devspace NAME is the machine-flavored part: work box = teak-devspace,
+# with the personal org carved out under catalyst/.)
 _:
 
 {
+  catalyst.devspace = {
+    root = "teak-devspace";
+    orgSubdir = "catalyst";
+  };
+
   catalyst.palette = {
     deep = "#010b06";     # near-black green
     mid = "#06331c";

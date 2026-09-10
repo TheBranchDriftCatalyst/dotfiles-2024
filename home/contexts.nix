@@ -5,6 +5,12 @@
 # applies; everywhere else the base identity holds. Adding a context is one
 # attrset entry — the machine never enters into it. (Machine look/livery is a
 # separate invariant: theme.nix.)
+#
+# The doctrine survives machine-flavored devspace NAMES because includeIf on a
+# directory that doesn't exist simply never matches: the one map below declares
+# BOTH machines' layouts, and each machine only ever has one root on disk.
+#   work box (teakbook):   ~/teak-devspace/      work id, carve-out catalyst/
+#   personal laptop:       ~/catalyst-devspace/  base id,  carve-out teak/
 { lib, ... }:
 
 {
@@ -34,19 +40,25 @@
         };
       });
       default = {
+        # the work devspace on the work machine
         protecht = {
-          dir = "~/catalyst-devspace/";
+          dir = "~/teak-devspace/";
           email = "h.daniels@protecht.com";
         };
         # carve-out: the personal-org working repos INSIDE the work devspace.
         # git.nix renders contexts most-specific-last, so this deeper dir
         # wins over protecht for everything under catalyst/.
         catalyst = {
-          dir = "~/catalyst-devspace/catalyst/";
+          dir = "~/teak-devspace/catalyst/";
           email = "djdanielsh@gmail.com"; # mirrors the base identity
         };
-        # future contexts drop in here, e.g.:
-        # teak = { dir = "~/teak/"; email = "..."; };
+        # carve-out mirror on the personal laptop: work repos INSIDE the
+        # personal devspace. Bare ~/catalyst-devspace/ needs NO entry there —
+        # the base identity is already gmail.
+        teak = {
+          dir = "~/catalyst-devspace/teak/";
+          email = "h.daniels@protecht.com";
+        };
       };
     };
   };
