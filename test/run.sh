@@ -40,8 +40,9 @@ run_step "activation succeeded" ./result/activate
 
 echo "══ 4. links ══"
 check "~/.zshrc exists"        test -e "$HOME/.zshrc"
-check "~/.zsh dir present"     test -d "$HOME/.zsh"
-check "numbered zsh files"     sh -c 'ls "$HOME"/.zsh/[0-9]*.zsh >/dev/null 2>&1'
+# ~/.zsh may exist (HM installs its zsh plugins there) but the old
+# numbered-file payload must be gone — HM initContent is the only init.
+check "no numbered zsh files"  sh -c '! ls "$HOME"/.zsh/[0-9]*.zsh >/dev/null 2>&1'
 check "git config (xdg)"       test -e "$HOME/.config/git/config"
 check "tmux.conf (xdg)"        test -e "$HOME/.config/tmux/tmux.conf"
 
@@ -65,9 +66,9 @@ fi
 
 echo "══ 7. did the zsh payload actually load? (the afx trap) ══"
 check "aliases loaded"          zsh -i -c 'alias | grep -q .'
-check "has() defined"           zsh -i -c 'typeset -f has >/dev/null'
-check "catalyst-doctor defined" zsh -i -c 'typeset -f catalyst-doctor >/dev/null'
-check "compdef worked"          zsh -i -c 'typeset -f git_dbranch >/dev/null'
+check "safety rails active"     zsh -i -c 'alias cp | grep -q nocorrect'
+check "setopts applied"         zsh -i -c '[[ -o autopushd ]]'
+check "spellcheck retired"      zsh -i -c '[[ ! -o correctall ]]'
 check "starship is the prompt"  zsh -i -c 'typeset -f prompt_starship_precmd >/dev/null'
 
 echo

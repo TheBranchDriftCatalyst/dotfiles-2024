@@ -25,7 +25,7 @@
     let
       # Where this repo lives. Everything that needs a live (editable) symlink
       # resolves through here — never a hardcoded /Users/<name>.
-      dotfilesRepo = "catalyst-devspace/catalyst/@dotfiles";
+      dotfilesRepo = ".dotfiles";
 
       mkArgs = system: {
         inherit inputs dotfilesRepo system;

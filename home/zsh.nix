@@ -1,39 +1,103 @@
-# zsh — the highest-risk part of this migration.
+# zsh — single-mechanism init: home-manager owns the whole story.
 #
-# Under the old setup, afx's `local` package is what sourced ~/.zsh/[0-9]*.zsh.
-# Remove afx without replacing that loop and you get a shell with zero aliases
-# and zero functions, silently. This module IS that replacement.
-{ pkgs, lib, config, dotfilesRepo, ... }:
+# History: afx sourced ~/.zsh/[0-9]*.zsh; the first migration re-implemented
+# that loop inside initContent ("the afx replacement"), leaving two layered
+# init systems. This module is the melt: settings live here declaratively,
+# authored commands live in ./zsh/*.zsh (store paths, sourced by name below,
+# commented-out until used — see the curation contract in those files).
+# There is no ~/.zsh directory and no sourcing loop anymore.
+#
+# Machine-local secrets: the old loop picked up gitignored *secret*.zsh
+# drop-ins. That escape hatch is gone — secrets belong in @secrets/sops-nix,
+# not shell files.
+{ pkgs, lib, config, ... }:
 
-let
-  # Live path into the working checkout, so `.zsh/*.zsh` stays editable without
-  # a rebuild. This is the deliberate hybrid: config you tinker with is live,
-  # everything else is a pure store path.
-  repo = "${config.home.homeDirectory}/${dotfilesRepo}";
-  mkLive = config.lib.file.mkOutOfStoreSymlink;
-in
 {
-  # Payload configs the old dotbot base profile linked; static, so pure store.
-  xdg.configFile."gomi".source = ../dotfiles/.config/gomi;
-  xdg.configFile."gh-dash".source = ../dotfiles/.config/gh-dash;
+  # Payload configs the old dotbot base profile linked; static one-shot
+  # provisioning, so settings live as Nix data and YAML renders at build time.
+  # gh-dash reads config.yml, not .yaml.
+  xdg.configFile."gh-dash/config.yml".source =
+    (pkgs.formats.yaml { }).generate "gh-dash-config.yml" {
+      prSections = [
+        { title = "My Pull Requests"; filters = "is:open author:@me"; }
+        { title = "Needs My Review"; filters = "is:open review-requested:@me"; }
+        { title = "Involved"; filters = "is:open involves:@me -author:@me"; }
+      ];
+      issuesSections = [
+        { title = "My Issues"; filters = "is:open author:@me"; }
+        { title = "Assigned"; filters = "is:open assignee:@me"; }
+        { title = "Involved"; filters = "is:open involves:@me -author:@me"; }
+      ];
+      defaults = {
+        preview = { open = true; width = 50; };
+        prsLimit = 20;
+        issuesLimit = 20;
+        view = "prs";
+        layout = {
+          prs = {
+            updatedAt.width = 7;
+            repo.width = 15;
+            author.width = 15;
+            assignees = { width = 20; hidden = true; };
+            base = { width = 15; hidden = true; };
+            lines.width = 16;
+          };
+          issues = {
+            updatedAt.width = 7;
+            repo.width = 15;
+            creator.width = 10;
+            assignees = { width = 20; hidden = true; };
+          };
+        };
+        refetchIntervalMinutes = 30;
+      };
+      keybindings = { issues = [ ]; prs = [ ]; };
+      repoPaths = { };
+      pager.diff = "";
+    };
 
-  # Link each file INDIVIDUALLY so ~/.zsh stays a real directory — HM itself
-  # installs plugins under ~/.zsh/plugins/, and a whole-directory symlink made
-  # those writes land outside $HOME (same failure shape as the old afx#40 bug).
-  # builtins.readDir keeps this in sync with the repo automatically.
-  home.file = lib.mapAttrs' (name: _:
-    lib.nameValuePair ".zsh/${name}" {
-      source = mkLive "${repo}/dotfiles/.zsh/${name}";
-    }
-  ) (builtins.readDir ../dotfiles/.zsh);
+  # gomi (the `rm` below) — same treatment.
+  xdg.configFile."gomi/config.yaml".source =
+    (pkgs.formats.yaml { }).generate "gomi-config.yaml" {
+      core = {
+        trash = { strategy = "auto"; home_fallback = true; };
+        restore = { confirm = true; verbose = true; };
+        permanent_delete.enable = false;
+        trash_dir = "";
+      };
+      ui = {
+        density = "compact";
+        exit_message = "later alligator!";
+        preview = {
+          syntax_highlight = true;
+          directory_command = "ls -GF -1 -A --color=always";
+          # themes: https://xyproto.github.io/splash/docs/index.html
+          colorscheme = "dracula";
+        };
+        paginator_type = "dots";
+      };
+      history = {
+        include.within_days = 365;
+        exclude = {
+          files = [ ".DS_Store" ];
+          patterns = [ ];
+          globs = [ "*cache*" ];
+          size = { min = "0KB"; max = "20GB"; };
+        };
+      };
+      logging = {
+        enabled = true;
+        level = "debug";
+        rotation = { max_size = "10MB"; max_files = 3; };
+      };
+    };
 
   programs.zsh = {
     enable = true;
 
     # HM emits compinit as part of its completion block, which lands BEFORE
-    # initContent. That ordering is load-bearing: 40_functions.zsh calls
-    # `compdef`, which does not exist until compinit has run. The old .zshrc
-    # got this wrong (compinit ran three times, all too late).
+    # initContent. That ordering is load-bearing: ./zsh/functions.zsh calls
+    # `compdef` (when uncommented), which does not exist until compinit runs.
     enableCompletion = true;
     autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
@@ -71,83 +135,28 @@ in
 
     initContent = lib.mkMerge [
       # fpath must be extended BEFORE compinit runs (HM emits compinit around
-      # order 550; mkOrder 400 lands ahead of it). These are the vendored
-      # completions (_gomi, _gist, _iap_curl …) the old .zshenv exposed.
+      # order 550; mkOrder 400 lands ahead of it). Only vendored completion
+      # left is _gomi — gomi ships none and can't generate one.
       (lib.mkOrder 400 ''
-        fpath=("$HOME/.zsh/Completion" $fpath)
+        fpath=("${./zsh/completions}" $fpath)
       '')
 
       (lib.mkAfter ''
-      # ── the afx replacement ────────────────────────────────────────────
-      # Source every numbered config file, in order. 00_guards.zsh defines
-      # has()/src()/try_eval()/try_comp() and MUST sort first — everything
-      # after it depends on those helpers.
-      for _f in "$HOME"/.zsh/[0-9]*.zsh(N); do
-        source "$_f"
-      done
-      unset _f
+      # ── the curated command library (see the contract in each file) ────
+      source ${./zsh/aliases.zsh}
+      source ${./zsh/functions.zsh}
+      source ${./zsh/fzf-git.zsh}
 
-      # ── setopts not covered by programs.zsh.history ────────────────────
-      setopt auto_cd auto_pushd pushd_ignore_dups pushd_to_home
-      setopt extended_glob glob_dots no_case_glob mark_dirs
-      setopt interactive_comments no_beep no_list_beep no_hist_beep
-      setopt complete_in_word always_last_prompt auto_menu auto_param_slash
-      setopt long_list_jobs notify no_flow_control
-      setopt no_clobber rm_star_wait print_exit_value
-      setopt hist_verify hist_reduce_blanks hist_no_store hist_no_functions
+      # LS_COLORS is rendered at BUILD time by vivid (neon-cyberpunk theme,
+      # matches the livery) — replaces the 2012 .dir_colors relic and its
+      # per-shell dircolors eval. Exported BEFORE init.zsh, whose list-colors
+      # zstyle reads it (that zstyle was a silent no-op for years — nothing
+      # set LS_COLORS). Livery followup: generate the theme from the palette.
+      export LS_COLORS="$(<${pkgs.runCommand "ls-colors-cyberdream" { } "${pkgs.vivid}/bin/vivid generate cyberdream > $out"})"
 
-      # only record commands that actually resolve to something
-      zshaddhistory() { whence ''${''${(z)1}[1]} >| /dev/null || return 1 }
-
-      # ── aliases ported from afx plugin.env/snippet blocks ──────────────
-      # These lived only in ~/.config/afx/*.yaml, not in 30_aliases.zsh —
-      # verified no collisions. exa aliases carried over onto eza.
-      alias ls='eza'
-      alias l='eza -1'
-      alias ll='eza -l --git'
-      alias la='eza -a'
-      alias lla='eza -la --git'
-      alias lt='eza --tree --level=2'
-      alias lta='eza --tree --level=2 -a'
-      alias cat='bat'
-      alias rm='gomi'
-      alias g='lazygit'
-      alias jq='jq -C'
-      alias diff='colordiff -u'
-      export BAT_PAGER='less -RF'
-
-      # bare `cd` -> interactive picker of recent dirs (the old enhancd
-      # muscle memory, rebuilt on zoxide's frecency db + fzf). With args,
-      # cd behaves normally; zoxide keeps learning either way.
-      cd() {
-        if (( $# == 0 )) && whence __zoxide_zi >/dev/null 2>&1; then
-          __zoxide_zi
-        else
-          builtin cd "$@"
-        fi
-      }
-
-      # auto-list on cd: every directory change shows what's there.
-      # Guarded on a real terminal; capped for huge dirs so cd into
-      # node_modules doesn't flood the screen.
-      _eza_on_chpwd() {
-        [[ -t 1 ]] || return 0
-        local count
-        count=$(command ls -A 2>/dev/null | wc -l | tr -d " ")
-        if [[ "''${count:-0}" -gt 100 ]]; then
-          eza --group-directories-first | head -20
-          print -P "%F{8}… ''${count} entries%f"
-        else
-          eza --group-directories-first
-        fi
-      }
-      add-zsh-hook chpwd _eza_on_chpwd
-
-      # fzf integration — guard on a real terminal, not [[ -o zle ]]; key
-      # bindings are meaningless without one and the eval errors headlessly.
-      if has fzf && [[ -t 0 ]]; then
-        eval "$(fzf --zsh)"
-      fi
+      # ── ACTIVE runtime settings: setopts, zstyles, keybindings, core
+      # aliases — pure zsh, so it lives as a real file (IDE-highlighted).
+      source ${./zsh/init.zsh}
       '')
     ];
   };

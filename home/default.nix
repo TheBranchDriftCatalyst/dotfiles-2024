@@ -19,6 +19,7 @@
     ./catalyst.nix
     ./ghostty.nix
     ./vscode.nix
+    ./claude.nix
   ];
 
   home.username = lib.mkDefault "dj";
@@ -40,14 +41,23 @@
     WORDCHARS = "*?_-.[]~=&;!#$%^(){}<>";
   };
 
-  # @cli-tools/bin is appended by catalyst.nix, which owns that option.
-  # Small static dotfiles from the payload — pure store links.
-  home.file.".curlrc".source = ../dotfiles/.curlrc;
-  home.file.".dir_colors".source = ../dotfiles/.dir_colors;
-  home.file.".editorconfig".source = ../dotfiles/.editorconfig;
-  home.file.".prettierrc.yaml".source = ../dotfiles/.prettierrc.yaml;
-  home.file.".obsidian.vimrc".source = ../dotfiles/.obsidian.vimrc;
-  home.file.".gitmessage".source = ../dotfiles/.gitmessage;
+  # Small static dotfiles — data in nix, payloads in ./dotfiles (named with
+  # extensions so the IDE highlights them). NAMING: home/dotfiles = the STORE
+  # payload set (read-only, rebuild-per-tweak); repo-root dotfiles/ = the LIVE
+  # payload set (out-of-store symlinks, app-writable). Same word, two modes —
+  # the directory you're in tells you which. Gone entirely: .dir_colors
+  # (LS_COLORS via vivid in zsh.nix), .curlrc (once carried `-k`, disabling
+  # TLS verification machine-wide), .obsidian.vimrc (plugin unused), and the
+  # ~/.gitmessage link (git.nix points at the store copy).
+  home.file.".editorconfig".source = ./dotfiles/editorconfig.ini;
+
+  home.file.".prettierrc.yaml".source =
+    (pkgs.formats.yaml { }).generate "prettierrc.yaml" {
+      trailingComma = "es5";
+      tabWidth = 2;
+      semi = false;
+      singleQuote = true;
+    };
 
   home.sessionPath = [
     "$HOME/bin"

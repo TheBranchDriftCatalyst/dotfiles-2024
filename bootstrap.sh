@@ -17,7 +17,7 @@
 set -euo pipefail
 
 DEVSPACE="${DEVSPACE:-$HOME/catalyst-devspace}"
-REPO_DIR="$DEVSPACE/catalyst/@dotfiles"
+REPO_DIR="$HOME/.dotfiles"
 REPO_URL="https://github.com/TheBranchDriftCatalyst/dotfiles-2024.git"
 BRANCH="${BRANCH:-nix-next}"
 

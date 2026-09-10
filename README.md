@@ -37,10 +37,16 @@ home/
   default.nix          shared, imported by BOTH platforms
   packages.nix         the portable tool layer — replaces afx AND Brewfile.core
   zsh.nix              prompt-critical; see below
-  git.nix tmux.nix starship.nix neovim.nix ghostty.nix catalyst.nix
+  git.nix tmux.nix starship.nix neovim.nix ghostty.nix catalyst.nix claude.nix
   darwin.nix linux.nix platform-conditional
-dotfiles/              raw payload, live-symlinked (editable without a rebuild)
+  dotfiles/            raw payload, STORE mode (read-only, rebuild-per-tweak)
+dotfiles/              raw payload, LIVE mode (symlinked, editable without a rebuild)
 ```
+
+Two directories named `dotfiles`, deliberately: **`home/dotfiles/` is the
+store set, repo-root `dotfiles/` is the live set.** Same kind of content —
+real config files with real extensions — the location encodes the mode.
+A file moves between them only when its mode changes (see the decider below).
 
 ## The hybrid symlink rule
 
@@ -49,17 +55,35 @@ reproducibility and miserable for iteration. So:
 
 | Path | Mode | Why |
 |---|---|---|
-| `~/.zsh/*` | **live** (`mkOutOfStoreSymlink`) | you edit aliases constantly |
-| `~/.config/nvim` | **live** | lazy.nvim writes at runtime |
+| `~/Library/…/Code/User/settings.json` | **live** (`mkOutOfStoreSymlink`) | VS Code writes to it at runtime |
+| `~/.claude/{settings.json, CLAUDE.md, agents/, commands/}` | **live** (`mkOutOfStoreSymlink`) | Claude Code writes via `/config`, `/memory`, `/agents` |
+| `~/.claude/hooks/` | **live** (deliberate exception) | app never writes them, but hook scripts iterate like prompts, not like nix config |
 | everything else | pure store | reproducible, read-only |
+
+**The `dotfiles/` folder is exactly the set of files that need symlinks — and
+the ability decider is: does the *application itself* write to the file?**
+VS Code updates settings.json from its own UI, and you want those edits
+persisted back into this repo — so it lives in `dotfiles/` behind a live
+symlink. If only you (or nix) ever write a file, it's static config and
+belongs in a `home/` module, not here. One deliberate exception:
+`dotfiles/claude/hooks/` — nothing but the operator writes those scripts, but
+they get tuned as often as the prompt they sit next to, so they ride the live
+link rather than paying rebuild-per-tweak.
+
+Shell config and nvim used to be live too; both melted into pure store
+(2026-09): nvim's plugins now come from nixpkgs (no lazy-lock.json to write),
+and the shell's command library lives in `home/zsh/*.zsh` under the curation
+contract described in those files. Editing either is now rebuild-per-tweak.
 
 ## Things that bit us, encoded here so they can't recur
 
-- **`compinit` must run before `40_functions.zsh`**, which calls `compdef`. home-manager emits
-  compinit ahead of `initContent`, which is why the source loop lives there.
-- **afx was load-bearing beyond packages** — its `local` package is what sourced
-  `~/.zsh/[0-9]*.zsh`. `home/zsh.nix` is that replacement. Without it you get a shell with zero
-  aliases, silently.
+- **`compinit` must run before any `compdef`** (home/zsh/functions.zsh uses one). home-manager
+  emits compinit ahead of `initContent`, which is why all shell payload is sourced from there.
+- **afx was load-bearing beyond packages** — its `local` package sourced `~/.zsh/[0-9]*.zsh`.
+  The first migration re-implemented that loop inside `home/zsh.nix`; the second melt (2026-09)
+  deleted the loop and the `~/.zsh` directory entirely — HM's `initContent` is the only init
+  mechanism now. A vendored 2015 `_git` completion had been silently shadowing zsh's modern one
+  the whole time; the vendored `Completion/` dir is gone with it.
 - **`tmux.conf` hardcoded `/bin/zsh`**, which under Nix is the wrong zsh. Now `${pkgs.zsh}/bin/zsh`.
 - **Three competing fzf configs** collapsed into `programs.fzf`.
 - **`.curlrc` had `-k`**, disabling TLS verification for every curl on the machine. Removed.
@@ -88,7 +112,7 @@ has been evaluated. Gates, in order:
 ### Known gaps
 
 - afx is fully retired: its aliases live in `home/zsh.nix`, its fzf helper functions in
-  `dotfiles/.zsh/60_fzf.zsh`, and its 81 packages in `home/packages.nix`. The `.config/afx`
+  `home/zsh/fzf-git.zsh`, and its 81 packages in `home/packages.nix`. The `.config/afx`
   directory is deleted; the `protecht` branch keeps the original YAMLs if archaeology is needed.
 - The two babarot gists supply `gcp-context` and `kube-context`, called from the tmux
   `status-left`. Not yet packaged.

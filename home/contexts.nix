@@ -38,6 +38,13 @@
           dir = "~/catalyst-devspace/";
           email = "h.daniels@protecht.com";
         };
+        # carve-out: the personal-org working repos INSIDE the work devspace.
+        # git.nix renders contexts most-specific-last, so this deeper dir
+        # wins over protecht for everything under catalyst/.
+        catalyst = {
+          dir = "~/catalyst-devspace/catalyst/";
+          email = "djdanielsh@gmail.com"; # mirrors the base identity
+        };
         # future contexts drop in here, e.g.:
         # teak = { dir = "~/teak/"; email = "..."; };
       };

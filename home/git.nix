@@ -17,11 +17,14 @@ let g = config.catalyst.git; in
 
     # One includeIf per declared context — identity follows the DIRECTORY,
     # never the machine. The mechanism is git's own conditional include;
-    # contexts.nix only supplies the values.
-    includes = lib.mapAttrsToList (_: c: {
+    # contexts.nix only supplies the values. Ordering is load-bearing: git's
+    # last matching include wins, so contexts render sorted by dir length —
+    # most specific LAST. Nested carve-outs beat their parents by shape,
+    # never by attr-name luck.
+    includes = map (c: {
       condition = "gitdir:${c.dir}";
       contents = { user.email = c.email; } // c.extraConfig;
-    }) g.contexts;
+    }) (lib.sortOn (c: lib.stringLength c.dir) (lib.attrValues g.contexts));
 
 
     ignores = [
@@ -43,10 +46,11 @@ let g = config.catalyst.git; in
       merge.conflictStyle = "zdiff3";
       rerere.enabled = true;
       help.autocorrect = 1;
-      commit.template = "~/.gitmessage";
+      # conventional-commits template, straight from the store — no home link
+      commit.template = "${./dotfiles/gitmessage}";
 
       # ported from the old .gitconfig — `unadd` is load-bearing
-      # (fzf_git_unadd in dotfiles/.zsh/60_fzf.zsh calls it)
+      # (fzf_git_unadd in home/zsh/fzf-git.zsh calls it)
       alias = {
         st = "status";
         co = "checkout";

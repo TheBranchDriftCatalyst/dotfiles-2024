@@ -85,29 +85,42 @@ place by home-manager:
 
 You don't edit these files — you edit the module that generates them, then
 `just switch`. In exchange they are versioned, rollback-able, and identical on
-every machine. The generated `.zshrc` is also the **orchestrator**: home-manager
+every machine. Store-mode payload files that are too real-file-shaped to inline
+in nix (tmux.conf, gitmessage, editorconfig.ini) live in **`home/dotfiles/`** —
+the store twin of repo-root **`dotfiles/`**, which is the live set. Same word
+on purpose: the directory encodes the mode, and a file moves between the two
+only when its mode changes. The generated `.zshrc` is also the **orchestrator**: home-manager
 emits compinit, plugin loading, and tool hooks in a controlled order (see
 below).
 
 ### Live payload — editable without a rebuild
 
-The files you tinker with daily are **out-of-store symlinks** pointing back
-into this repo's working tree:
+A small set of files are **out-of-store symlinks** pointing back into this
+repo's working tree, because the application itself writes to them at runtime:
 
 ```
-~/.zsh/30_aliases.zsh -> <repo>/dotfiles/.zsh/30_aliases.zsh   (live)
-~/.config/nvim        -> <repo>/dotfiles/.config/nvim          (live)
+~/Library/Application Support/Code/User/settings.json -> <repo>/dotfiles/vscode/settings.json
+~/.claude/settings.json                               -> <repo>/dotfiles/claude/settings.json
+~/.claude/CLAUDE.md                                   -> <repo>/dotfiles/claude/CLAUDE.md
+~/.claude/agents, commands, hooks                     -> <repo>/dotfiles/claude/…
 ```
 
-Edit → open a new shell → change is live. No rebuild. The cost is that these
-files aren't captured in the generation snapshot — they follow the git repo
-instead, which is exactly what you want for a file you edit ten times a day.
+(`hooks/` is a deliberate decider exception — operator-authored, but iterated
+like the prompt, so it rides the live link.)
 
-Implementation note: each `.zsh` file is linked **individually**
-(`builtins.readDir` in `home/zsh.nix`), so `~/.zsh` stays a real directory.
-Home-manager installs its own zsh plugins under `~/.zsh/plugins/`, and a
-whole-directory symlink would send those writes outside `$HOME` — the same
-failure shape as the old afx#40 symlink trap, solved the same way.
+The rest of `~/.claude` (projects/, plugins/, sessions, caches) is runtime
+state and stays a real, unmanaged directory — nix only plants links inside it.
+
+Shell config and nvim were live once too; both melted into pure store
+(2026-09). Nvim's plugins now come from nixpkgs so nothing writes into its
+config, and the shell's command library moved to `home/zsh/*.zsh` — real,
+syntax-highlighted files, but store-sourced. Editing them is rebuild-per-tweak,
+and in exchange every generation snapshot captures the whole shell.
+
+The command library runs a **curation contract** (see the header of each file
+in `home/zsh/`): blocks are commented out with an operator note until actually
+used. Uncomment → `just switch` → live. Still commented in a few months →
+deletion candidate.
 
 ### The zsh startup order (load-bearing)
 
@@ -115,18 +128,19 @@ failure shape as the old afx#40 symlink trap, solved the same way.
 /etc/zshenv          nix-darwin: PATH + fpath           (layer 3 above)
 ~/.zshenv            home-manager: session vars
 ~/.zshrc             home-manager generated, in order:
-  ├─ fpath += ~/.zsh/Completion        (mkOrder 400 — BEFORE compinit)
-  ├─ compinit                          (once; 40_functions.zsh needs compdef)
+  ├─ fpath += <store>/zsh/completions  (mkOrder 400 — BEFORE compinit)
+  ├─ compinit                          (once; compdef exists from here on)
   ├─ plugins (abbr, autosuggest, syntax highlighting)
-  ├─ source ~/.zsh/[0-9]*.zsh          (the live payload — aliases, functions)
+  ├─ source <store>/zsh/{aliases,functions,fzf-git}.zsh   (curated payload)
+  ├─ keybindings, setopts, zstyles     (declared inline in home/zsh.nix)
   ├─ tool hooks: starship, direnv, zoxide, mise
   └─ fzf keybindings                   (guarded on a real TTY)
 ```
 
-`00_guards.zsh` sorts first and defines `has()`/`src()`/`try_eval()` — every
-later file depends on them. The old setup ran compinit three times, too late;
-the ordering above is enforced by the module system and covered by the
-container test.
+There is exactly one init mechanism: home-manager's `initContent` merge order.
+The old numbered-file loop (`00_guards` first, everything depending on it) is
+gone — the old setup also ran compinit three times, too late; the ordering
+above is enforced by the module system and covered by the container test.
 
 ## Division of labour
 
@@ -145,8 +159,8 @@ brew.** Homebrew runs with `cleanup = "zap"`, so a cask exists only while a
 
 | You want to… | Do |
 |---|---|
-| add/change an alias or shell function | edit `dotfiles/.zsh/*.zsh` — live immediately |
-| tweak nvim | edit `dotfiles/.config/nvim/` — live immediately |
+| add/change an alias or shell function | edit `home/zsh/*.zsh` (or `home/zsh.nix`) → `just switch` |
+| tweak nvim | edit `home/nvim/` → `just switch` |
 | add a CLI tool | add to `home/packages.nix` → `just switch` |
 | add a GUI app | add cask in `hosts/<hostname>/default.nix` → `just switch` |
 | change git/tmux/starship/ghostty config | edit the module in `home/` → `just switch` |

@@ -1,5 +1,7 @@
-# catalyst devspace wiring — replaces .zsh/80_catalyst.zsh's PATH handling
-# and the dotbot-git repo cloning, which has no home-manager equivalent.
+# catalyst devspace wiring — owns DEV_SPACE_ROOT and the dotbot-git repo
+# cloning, which has no home-manager equivalent.
+# NOTE: @cli-tools/bin is deliberately NOT on PATH anymore (2026-09) — the
+# bin-dir pattern is retired; those tools get a modular repackaging (DJ's).
 { pkgs, lib, config, ... }:
 
 let
@@ -8,12 +10,15 @@ in
 {
   home.sessionVariables.DEV_SPACE_ROOT = devspace;
 
-  home.sessionPath = [ "${devspace}/catalyst/@cli-tools/bin" ];
 
   # dotbot's `git:` directive cloned @cli-tools / @machines / @secrets. These
   # are working repos you commit to, so they must NOT become read-only store
   # paths via flake inputs — an activation script preserves the semantics.
-  # TODO: need to add some tender love and care here
+  # (@dotfiles moved OUT to ~/.dotfiles, 2026-09 — catalyst/ holds the
+  # personal-org working repos only, and contexts.nix carves it out of the
+  # work git identity.)
+  # TODO: need to add some tender love and care here, yea this is going to entirely change
+  # we are going to get rid of these and we are goign to install the cli tool i built instead
   home.activation.catalystRepos =
     lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       _clone() {

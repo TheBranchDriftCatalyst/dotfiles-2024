@@ -1,6 +1,15 @@
+local nix = require "nix_paths"
+
 return {
+  -- every spec resolves to <nix.plugins>/<name>; nothing is cloned, updated,
+  -- or locked at runtime — the nixpkgs pin is the lockfile
+  dev = { path = nix.plugins, patterns = { "" }, fallback = false },
+  install = { missing = false },
+  rocks = { enabled = false },
+  pkg = { enabled = false },
+  change_detection = { enabled = false },
+
   defaults = { lazy = true },
-  install = { colorscheme = { "nvchad" } },
 
   ui = {
     icons = {
