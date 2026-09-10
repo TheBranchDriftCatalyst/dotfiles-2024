@@ -1,8 +1,5 @@
 {
   "model": "fable[1m]",
-  "tui": "fullscreen",
-  "theme": "dark",
-  "agentPushNotifEnabled": true,
   "hooks": {
     "PreToolUse": [
       {
@@ -15,20 +12,6 @@
         ]
       }
     ]
-  },
-  "extraKnownMarketplaces": {
-    "catalyst": {
-      "source": {
-        "source": "github",
-        "repo": "TheBranchDriftCatalyst/catalyst-agentic-sdlc"
-      }
-    },
-    "beads-marketplace": {
-      "source": {
-        "source": "github",
-        "repo": "gastownhall/beads"
-      }
-    }
   },
   "enabledPlugins": {
     "atlassian@claude-plugins-official": true,
@@ -46,6 +29,24 @@
     "skill-creator@claude-plugins-official": true,
     "superpowers@claude-plugins-official": true,
     "ticket-workflows-v2@catalyst": true,
-    "ticket-workflows@catalyst": true
-  }
+    "ticket-workflows@catalyst": true,
+    "lua-lsp@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "catalyst": {
+      "source": {
+        "source": "github",
+        "repo": "TheBranchDriftCatalyst/catalyst-agentic-sdlc"
+      }
+    },
+    "beads-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "gastownhall/beads"
+      }
+    }
+  },
+  "tui": "fullscreen",
+  "theme": "dark",
+  "agentPushNotifEnabled": true
 }
