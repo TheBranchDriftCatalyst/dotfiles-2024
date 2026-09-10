@@ -53,6 +53,11 @@ in
   services.aerospace = {
     enable = true;
     settings = {
+      # v2: persistent-workspaces must be declared instead of being inferred
+      # from the keybindings (v1 behavior, warned as outdated on every parse)
+      config-version = 2;
+      persistent-workspaces = [ "1" "2" "3" "4" "5" "6" "7" "8" "9" ];
+
       after-startup-command = [ ];
       # tell sketchybar when the workspace changes (its items subscribe)
       exec-on-workspace-change = [
