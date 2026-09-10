@@ -11,7 +11,7 @@ deletion candidate — one module/line each, nothing is load-bearing.**
 |---|---|---|
 | **AeroSpace** | i3-style tiling WM, no SIP hacks | `alt-hjkl` focus · `alt-shift-hjkl` move · `alt-1..9` workspace · `alt-shift-1..9` send · `alt-tab` last workspace · `alt-f` fullscreen · `alt-r` resize mode · `alt-slash` tiles / `alt-comma` accordion · `alt-shift-space` float |
 | **JankyBorders** | glow border on the focused window | passive — neon green = focused, dim green = not. It IS the livery |
-| **SketchyBar** | replaces the Apple menu bar | workspace pills (click to jump), front app, clock/battery/CPU right side. Native bar is hidden (`_HIHideMenuBar`) |
+| **SketchyBar** | replaces the Apple menu bar (SbarLua config in `hosts/teakbookM5DJ/sketchybar/`) | workspace pills show the **app icons** living in each workspace (sketchybar-app-font glyphs) — click to jump; front app with icon; clock/battery/CPU right side. Native bar is hidden (`_HIHideMenuBar`) |
 
 Escape hatch: comment the `imports = [ ./rice.nix ];` line in
 `hosts/teakbookM5DJ/default.nix`, switch, done — all three go away together.
@@ -80,7 +80,8 @@ Considered and skipped for now:
 ## Follow-ups this pass created
 
 - atuin sync server decision (homelab candidate: it's one container).
-- SketchyBar is the plain-shell minimal cut — SbarLua + aerospace workspace
-  icons/app icons is the glow-up when you feel like ricing.
+- ~~SketchyBar plain-shell → SbarLua glow-up~~ DONE same day: Lua config with
+  app-icon workspace pills. Next rung if wanted: battery/volume popups,
+  media item, wifi.
 - First `just fmt` run = big one-time diff; do it as its own commit.
 - vivid-from-palette still parked.
