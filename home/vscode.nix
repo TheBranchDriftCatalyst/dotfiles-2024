@@ -12,50 +12,57 @@
 #
 #   2. settings.json — live-linked into the repo, so tweaks made in the UI
 #      land as a git diff instead of evaporating.
-{ config, lib, pkgs, dotfilesRepo, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  dotfilesRepo,
+  ...
+}:
 
 let
   repo = "${config.home.homeDirectory}/${dotfilesRepo}";
 
   extensions = [
     "anthropic.claude-code"
+    "golang.go" # the catalyst devspace CLI is Go; go itself via mise
     "jnoortheen.nix-ide"
-    "bbenoist.nix"                  # redundant with nix-ide; prune candidate
+    "bbenoist.nix" # redundant with nix-ide; prune candidate
     "ms-vscode.makefile-tools"
-    "max-ss.cyberpunk"              # "Activate UMBRA protocol"
+    "max-ss.cyberpunk" # "Activate UMBRA protocol"
     "robbowen.synthwave-vscode"
     "akamud.vscode-theme-onedark"
     "miguelsolorio.fluent-icons"
   ];
 
   settingsPath =
-    if pkgs.stdenv.hostPlatform.isDarwin
-    then "Library/Application Support/Code/User/settings.json"
-    else ".config/Code/User/settings.json";
+    if pkgs.stdenv.hostPlatform.isDarwin then
+      "Library/Application Support/Code/User/settings.json"
+    else
+      ".config/Code/User/settings.json";
 in
 {
   # Live symlink: VS Code writes settings through it into the repo.
   home.file.${settingsPath}.source =
     config.lib.file.mkOutOfStoreSymlink "${repo}/dotfiles/vscode/settings.json";
 
-  home.activation.vscodeExtensions =
-    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      _code=""
-      for c in "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" \
-               "$(command -v code 2>/dev/null || true)"; do
-        [ -x "$c" ] && _code="$c" && break
+  home.activation.vscodeExtensions = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    _code=""
+    for c in "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" \
+             "$(command -v code 2>/dev/null || true)"; do
+      [ -x "$c" ] && _code="$c" && break
+    done
+    if [ -n "$_code" ]; then
+      _have="$("$_code" --list-extensions 2>/dev/null | tr '[:upper:]' '[:lower:]')"
+      for ext in ${lib.escapeShellArgs extensions}; do
+        _lc=$(printf '%s' "$ext" | tr '[:upper:]' '[:lower:]')
+        case "$_have" in
+          *"$_lc"*) : ;;
+          *) echo "vscode: installing $ext"
+             $DRY_RUN_CMD "$_code" --install-extension "$ext" --force >/dev/null 2>&1 \
+               || echo "vscode: ✖ failed to install $ext" ;;
+        esac
       done
-      if [ -n "$_code" ]; then
-        _have="$("$_code" --list-extensions 2>/dev/null | tr '[:upper:]' '[:lower:]')"
-        for ext in ${lib.escapeShellArgs extensions}; do
-          _lc=$(printf '%s' "$ext" | tr '[:upper:]' '[:lower:]')
-          case "$_have" in
-            *"$_lc"*) : ;;
-            *) echo "vscode: installing $ext"
-               $DRY_RUN_CMD "$_code" --install-extension "$ext" --force >/dev/null 2>&1 \
-                 || echo "vscode: ✖ failed to install $ext" ;;
-          esac
-        done
-      fi
-    '';
+    fi
+  '';
 }

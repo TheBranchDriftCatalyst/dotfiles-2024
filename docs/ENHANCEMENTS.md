@@ -10,11 +10,11 @@ deletion candidate — one module/line each, nothing is load-bearing.**
 > New to tiling? **[RICE-GUIDE.md](RICE-GUIDE.md)** is the full tutorial:
 > the mental model, every hotkey, customization recipes, bar anatomy.
 
-| Thing | What | Daily driver moves |
-|---|---|---|
-| **AeroSpace** | i3-style tiling WM, no SIP hacks | `alt-hjkl` focus · `alt-shift-hjkl` move · `alt-1..9` workspace · `alt-shift-1..9` send · `alt-tab` last workspace · `alt-f` fullscreen · `alt-r` resize mode · `alt-slash` tiles / `alt-comma` accordion · `alt-shift-space` float |
-| **JankyBorders** | glow border on the focused window | passive — neon green = focused, dim green = not. It IS the livery |
-| **SketchyBar** | replaces the Apple menu bar (SbarLua config in `hosts/teakbookM5DJ/sketchybar/`) | workspace pills show the **app icons** living in each workspace (sketchybar-app-font glyphs) — click to jump; front app with icon; clock/battery/CPU right side. Native bar is hidden (`_HIHideMenuBar`) |
+| Thing            | What                                                                             | Daily driver moves                                                                                                                                                                                                                  |
+| ---------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **AeroSpace**    | i3-style tiling WM, no SIP hacks                                                 | `alt-hjkl` focus · `alt-shift-hjkl` move · `alt-1..9` workspace · `alt-shift-1..9` send · `alt-tab` last workspace · `alt-f` fullscreen · `alt-r` resize mode · `alt-slash` tiles / `alt-comma` accordion · `alt-shift-space` float |
+| **JankyBorders** | glow border on the focused window                                                | passive — neon green = focused, dim green = not. It IS the livery                                                                                                                                                                   |
+| **SketchyBar**   | replaces the Apple menu bar (SbarLua config in `hosts/teakbookM5DJ/sketchybar/`) | workspace pills show the **app icons** living in each workspace (sketchybar-app-font glyphs) — click to jump; front app with icon; clock/battery/CPU right side. Native bar is hidden (`_HIHideMenuBar`)                            |
 
 Escape hatch: comment the `imports = [ ./rice.nix ];` line in
 `hosts/teakbookM5DJ/default.nix`, switch, done — all three go away together.
@@ -74,6 +74,7 @@ cursor smear all exist).
 
 Current state (deliberate): `just vm` / `just vm k8s=true` / `just vm-stop`.
 Considered and skipped for now:
+
 - **launchd autostart** — costs battery on a laptop for a VM you don't always
   need; `just vm` is one command. Say the word and it's 5 lines in darwin.nix.
 - **declarative colima.yaml** — colima rewrites its own config file (state,

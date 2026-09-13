@@ -58,16 +58,20 @@
   # ~/.gitmessage link (git.nix points at the store copy).
   home.file.".editorconfig".source = ./dotfiles/editorconfig.ini;
 
-  home.file.".prettierrc.yaml".source =
-    (pkgs.formats.yaml { }).generate "prettierrc.yaml" {
-      trailingComma = "es5";
-      tabWidth = 2;
-      semi = false;
-      singleQuote = true;
-    };
+  home.file.".prettierrc.yaml".source = (pkgs.formats.yaml { }).generate "prettierrc.yaml" {
+    trailingComma = "es5";
+    tabWidth = 2;
+    semi = false;
+    singleQuote = true;
+  };
 
   home.sessionPath = [
     "$HOME/bin"
     "$HOME/.local/bin"
+    # mise shims: `mise activate` only injects PATH via interactive-shell
+    # hooks, which GUI-launched processes (VS Code extension host) never run.
+    # Shims are static and resolve the pinned version per-cwd, so editors see
+    # project runtimes too.
+    "$HOME/.local/share/mise/shims"
   ];
 }

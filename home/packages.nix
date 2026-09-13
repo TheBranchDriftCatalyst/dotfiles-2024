@@ -11,44 +11,98 @@
     # ── modern CLI replacements ──────────────────────────────────────────
     # (delta → programs.git.delta in git.nix; bat → programs.bat in cli.nix —
     # configured, not just installed)
-    eza fd ripgrep tree sd grex
+    eza
+    fd
+    ripgrep
+    tree
+    sd
+    grex
 
     # ── data wrangling ───────────────────────────────────────────────────
-    jq yq-go fx gron xan jless   # xan = maintained xsv fork (xsv was dropped from nixpkgs)
+    jq
+    yq-go
+    fx
+    gron
+    xan
+    jless # xan = maintained xsv fork (xsv was dropped from nixpkgs)
 
     # ── git & code ───────────────────────────────────────────────────────
     # (lazygit moved to programs.lazygit in cli.nix)
-    gh ghq git-lfs difftastic
-    colordiff diff-so-fancy git-open
-    shellcheck shfmt
-    gitleaks        # secret scanning — wired into .githooks/pre-commit
-    statix deadnix  # nix linting (anti-patterns / dead code)
+    gh
+    ghq
+    git-lfs
+    difftastic
+    colordiff
+    diff-so-fancy
+    git-open
+    shellcheck
+    shfmt
+    gitleaks # secret scanning — wired into .githooks/pre-commit
+    statix
+    deadnix # nix linting (anti-patterns / dead code)
 
     # ── shell UX ─────────────────────────────────────────────────────────
-    fzy zoxide gomi
+    fzy
+    zoxide
+    gomi
 
     # ── containers & k8s ─────────────────────────────────────────────────
-    kubectl kubectx kubernetes-helm kustomize k9s stern
-    kubetail kubeval kubesec kubectl-view-secret   # ketall: dropped from nixpkgs; use `kubectl get all -A`
-    lazydocker ctop dive
+    kubectl
+    kubectx
+    kubernetes-helm
+    kustomize
+    k9s
+    stern
+    kubetail
+    kubeval
+    kubesec
+    kubectl-view-secret # ketall: dropped from nixpkgs; use `kubectl get all -A`
+    lazydocker
+    ctop
+    dive
 
     # ── cloud & IaC ──────────────────────────────────────────────────────
-    awscli2 terraform-docs hcl2json conftest open-policy-agent
+    awscli2
+    terraform-docs
+    hcl2json
+    conftest
+    open-policy-agent
 
     # ── secrets ──────────────────────────────────────────────────────────
-    sops age mkcert
+    sops
+    age
+    mkcert
+    _1password-cli # `op` — repos consume vault secrets via use_onepassword (zsh.nix direnv stdlib)
 
     # ── net & inspection ─────────────────────────────────────────────────
-    curl wget nmap socat testssl   # httpstat: build broken on py3.14/unstable; use `curl -w`
+    curl
+    wget
+    nmap
+    socat
+    testssl # httpstat: build broken on py3.14/unstable; use `curl -w`
 
     # ── general ──────────────────────────────────────────────────────────
-    coreutils findutils gnused gnugrep gawk moreutils
-    p7zip pigz unzip htop procs dust duf watch
-    act glow hyperfine
-    just            # runs the repo justfile — the post-bootstrap control panel
-    nvd             # generation diffs for `just diff`
+    coreutils
+    findutils
+    gnused
+    gnugrep
+    gawk
+    moreutils
+    p7zip
+    pigz
+    unzip
+    htop
+    procs
+    dust
+    duf
+    watch
+    act
+    glow
+    hyperfine
+    just # runs the repo justfile — the post-bootstrap control panel
+    nvd # generation diffs for `just diff`
     nix-output-monitor
-    nh              # nicer switch UX + `nh clean` GC — justfile `switch` uses it
+    nh # nicer switch UX + `nh clean` GC — justfile `switch` uses it
 
     # ── fonts (these do NOT need a Homebrew cask) ────────────────────────
     nerd-fonts.hack

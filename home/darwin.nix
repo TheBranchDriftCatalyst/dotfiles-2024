@@ -1,11 +1,25 @@
 # macOS-only home-manager bits.
-{ pkgs, lib, config, dotfilesRepo, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  dotfilesRepo,
+  ...
+}:
 let
   repo = "${config.home.homeDirectory}/${dotfilesRepo}";
   pal = config.catalyst.palette;
-  paletteStr = lib.concatStringsSep "," (map (lib.removePrefix "#") [
-    pal.deep pal.mid pal.glow pal.sunTop pal.sunBot pal.grid pal.accent
-  ]);
+  paletteStr = lib.concatStringsSep "," (
+    map (lib.removePrefix "#") [
+      pal.deep
+      pal.mid
+      pal.glow
+      pal.sunTop
+      pal.sunBot
+      pal.grid
+      pal.accent
+    ]
+  );
   # Filename carries the palette hash: changing the palette in a host
   # config automatically renders a fresh wallpaper on the next switch.
   palHash = builtins.substring 0 8 (builtins.hashString "sha256" (paletteStr + pal.text));
@@ -26,7 +40,10 @@ in
 
     # Homebrew's bin dir still needs to be on PATH: nix-darwin drives brew
     # for GUI casks (it does not, and cannot, install them itself).
-    sessionPath = [ "/opt/homebrew/bin" "/opt/homebrew/sbin" ];
+    sessionPath = [
+      "/opt/homebrew/bin"
+      "/opt/homebrew/sbin"
+    ];
 
     # Wallpaper is generated, not stored — scripts/gen-wallpaper.py is ~90
     # lines of stdlib Python (the repo's pre-commit blocks binaries >1MB,

@@ -6,7 +6,9 @@
 # the host config) while the CONFIG is still managed here — declarative either way.
 { pkgs, config, ... }:
 
-let p = config.catalyst.palette; in
+let
+  p = config.catalyst.palette;
+in
 
 {
   programs.ghostty = {
@@ -28,17 +30,17 @@ let p = config.catalyst.palette; in
       macos-option-as-alt = true;
 
       # ── cyber neon vibrancy ─────────────────────────────────────────────
-      background-opacity = 0.82;          # acrylic glass over the desktop
-      background-blur-radius = 24;        # frosted, not muddy
-      window-colorspace = "display-p3";   # wider gamut = hotter neons
-      bold-is-bright = true;              # bold text jumps to bright palette
-      minimum-contrast = 1.1;             # keep glow readable on the glass
+      background-opacity = 0.82; # acrylic glass over the desktop
+      background-blur-radius = 24; # frosted, not muddy
+      window-colorspace = "display-p3"; # wider gamut = hotter neons
+      bold-is-bright = true; # bold text jumps to bright palette
+      minimum-contrast = 1.1; # keep glow readable on the glass
 
       cursor-style = "block";
       cursor-style-blink = true;
-      cursor-color = p.glow;              # the machine's neon (livery)
+      cursor-color = p.glow; # the machine's neon (livery)
       cursor-text = p.deep;
-      selection-background = "#7b2fbe";   # neon purple sweep
+      selection-background = "#7b2fbe"; # neon purple sweep
       selection-foreground = "#f8f8f2";
       unfocused-split-opacity = 0.65;
 

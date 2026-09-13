@@ -8,8 +8,8 @@ machinery bottom-up, then explains exactly how the dotfiles ride on top of it.
 
 ### 1. The store — `/nix/store/`
 
-Every package is a directory named by a cryptographic hash of *everything that
-built it* — source, compiler, flags, dependencies:
+Every package is a directory named by a cryptographic hash of _everything that
+built it_ — source, compiler, flags, dependencies:
 
 ```
 /nix/store/mybady8qj35dgfqnghkm4jj1c1pl7p4y-eza-0.23.5/bin/eza
@@ -29,7 +29,7 @@ the store:
                                        └─> /nix/store/…-eza-0.23.5/bin/eza
 ```
 
-No copying, no `/usr/local`, no package database to corrupt. The farm *is* the
+No copying, no `/usr/local`, no package database to corrupt. The farm _is_ the
 database.
 
 ### 3. PATH — the one line of "injection"
@@ -43,7 +43,7 @@ $HOME/.nix-profile/bin
 /nix/var/nix/profiles/default/bin    ← nix itself
 ```
 
-That is the *entire* runtime mechanism. It feels transparent because it is —
+That is the _entire_ runtime mechanism. It feels transparent because it is —
 plain `$PATH`, resolved by your shell like anything else.
 
 ### 4. Generations — snapshots you can flip between
@@ -96,7 +96,7 @@ below).
 ### Live payload — editable without a rebuild
 
 A small set of files are **out-of-store symlinks** pointing back into this
-repo's working tree, because the application itself writes to them at runtime:
+repo's working tree, because the application itself writes to them at runtime- or it is convenient- to be able to update these on the fly without needing a rebuild
 
 ```
 ~/Library/Application Support/Code/User/settings.json -> <repo>/dotfiles/vscode/settings.json
@@ -144,11 +144,11 @@ above is enforced by the module system and covered by the container test.
 
 ## Division of labour
 
-| Manager | Owns | Never owns |
-|---|---|---|
-| **nix** | every CLI tool, shell config, fonts, macOS defaults | GUI apps, project runtimes |
-| **homebrew** (driven *by* nix-darwin) | GUI casks + Mac App Store, kernel-extension apps | CLI tools |
-| **mise** | per-project runtimes (`.tool-versions` / `mise.toml`) | anything global |
+| Manager                               | Owns                                                  | Never owns                 |
+| ------------------------------------- | ----------------------------------------------------- | -------------------------- |
+| **nix**                               | every CLI tool, shell config, fonts, macOS defaults   | GUI apps, project runtimes |
+| **homebrew** (driven _by_ nix-darwin) | GUI casks + Mac App Store, kernel-extension apps      | CLI tools                  |
+| **mise**                              | per-project runtimes (`.tool-versions` / `mise.toml`) | anything global            |
 
 The rule that keeps three managers from becoming the old mess: **if a project
 pins it → mise; if you use it everywhere → nix; if it has a .app or a kext →
@@ -157,13 +157,13 @@ brew.** Homebrew runs with `cleanup = "zap"`, so a cask exists only while a
 
 ## Edit workflows, quick reference
 
-| You want to… | Do |
-|---|---|
-| add/change an alias or shell function | edit `home/zsh/*.zsh` (or `home/zsh.nix`) → `just switch` |
-| tweak nvim | edit `home/nvim/` → `just switch` |
-| add a CLI tool | add to `home/packages.nix` → `just switch` |
-| add a GUI app | add cask in `hosts/<hostname>/default.nix` → `just switch` |
-| change git/tmux/starship/ghostty config | edit the module in `home/` → `just switch` |
-| change a macOS default | `hosts/<hostname>/default.nix` → `just switch` |
-| undo any of the above | `just rollback` |
-| update everything | `just update && just build && just diff` → `just switch` |
+| You want to…                            | Do                                                         |
+| --------------------------------------- | ---------------------------------------------------------- |
+| add/change an alias or shell function   | edit `home/zsh/*.zsh` (or `home/zsh.nix`) → `just switch`  |
+| tweak nvim                              | edit `home/nvim/` → `just switch`                          |
+| add a CLI tool                          | add to `home/packages.nix` → `just switch`                 |
+| add a GUI app                           | add cask in `hosts/<hostname>/default.nix` → `just switch` |
+| change git/tmux/starship/ghostty config | edit the module in `home/` → `just switch`                 |
+| change a macOS default                  | `hosts/<hostname>/default.nix` → `just switch`             |
+| undo any of the above                   | `just rollback`                                            |
+| update everything                       | `just update && just build && just diff` → `just switch`   |

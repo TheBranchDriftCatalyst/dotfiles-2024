@@ -2,7 +2,9 @@
 # colored from the machine LIVERY (catalyst.palette).
 { config, ... }:
 
-let p = config.catalyst.palette; in
+let
+  p = config.catalyst.palette;
+in
 
 {
   # Encrypted, syncable, SQLite-backed shell history with TUI search.
@@ -25,18 +27,35 @@ let p = config.catalyst.palette; in
     # until then). "yy" is what the docs teach — pinned on purpose.
     shellWrapperName = "yy";
     theme.mgr = {
-      hovered = { bg = p.mid; bold = true; };
-      cwd = { fg = p.accent; bold = true; };
-      border_style = { fg = p.mid; };
-      marker_selected = { fg = p.glow; bg = p.glow; };
-      count_selected = { fg = p.deep; bg = p.glow; };
+      hovered = {
+        bg = p.mid;
+        bold = true;
+      };
+      cwd = {
+        fg = p.accent;
+        bold = true;
+      };
+      border_style = {
+        fg = p.mid;
+      };
+      marker_selected = {
+        fg = p.glow;
+        bg = p.glow;
+      };
+      count_selected = {
+        fg = p.deep;
+        bg = p.glow;
+      };
     };
   };
 
   programs.lazygit = {
     enable = true;
     settings.gui.theme = {
-      activeBorderColor = [ p.glow "bold" ];
+      activeBorderColor = [
+        p.glow
+        "bold"
+      ];
       inactiveBorderColor = [ p.mid ];
       selectedLineBgColor = [ p.mid ];
       optionsTextColor = [ p.accent ];

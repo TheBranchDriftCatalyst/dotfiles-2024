@@ -41,8 +41,8 @@ done
 # --- Enforce commit message policy ---
 if echo "$COMMAND" | grep -qE 'git commit'; then
   # Extract only the commit message (-m argument), not paths or cd commands
-  COMMIT_MSG=$(echo "$COMMAND" | grep -oP '(?<=-m\s["\x27]).*?(?=["\x27])' 2>/dev/null || \
-               echo "$COMMAND" | sed -n 's/.*-m[[:space:]]*"\([^"]*\)".*/\1/p' 2>/dev/null)
+  COMMIT_MSG=$(echo "$COMMAND" | grep -oP '(?<=-m\s["\x27]).*?(?=["\x27])' 2>/dev/null ||
+    echo "$COMMAND" | sed -n 's/.*-m[[:space:]]*"\([^"]*\)".*/\1/p' 2>/dev/null)
 
   # If we couldn't extract the message, fall back to checking only the git commit portion
   if [ -z "$COMMIT_MSG" ]; then

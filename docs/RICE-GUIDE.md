@@ -8,9 +8,9 @@ The "window shit is weird as fuck" doc. Everything here matches OUR config
 AeroSpace is a **tiling** window manager, i3-style. The rules:
 
 1. **You don't place windows — the layout does.** Every new window gets
-   inserted into the current workspace's *tree* and the tree divides the
+   inserted into the current workspace's _tree_ and the tree divides the
    screen. Two windows = half/half. Three = the space splits again. You never
-   drag to arrange; you move windows *within the tree* with the keyboard.
+   drag to arrange; you move windows _within the tree_ with the keyboard.
 2. **Workspaces (1-9) replace macOS Spaces.** They're instant (no swoosh
    animation) because AeroSpace fakes them by hiding windows, not by using
    macOS Spaces. A window lives in exactly one workspace. The bar's pills
@@ -35,40 +35,45 @@ workspace 2. `alt-tab` bounces between your two most-used workspaces.
 > Option is double-booked on this machine, deliberately: Ghostty sets
 > `macos-option-as-alt = true`, making ⌥ the **Meta** key for shell binds
 > inside the terminal. AeroSpace grabs its own combos at the system level
-> *first*, so ⌥+hjkl / ⌥+1..9 / etc. never reach the shell — every ⌥ combo
+> _first_, so ⌥+hjkl / ⌥+1..9 / etc. never reach the shell — every ⌥ combo
 > AeroSpace does NOT bind still works as Meta in the terminal. If a shell
 > keybind you care about ever "stops working", it's an AeroSpace binding
 > shadowing it: rebind one side (aerospace: `rice.nix`; shell:
 > `home/zsh/*.zsh` / `home/dotfiles/tmux.conf`).
 
 ### Focus & movement
-| Keys | Does |
-|---|---|
-| `alt-h/j/k/l` | focus window left/down/up/right |
+
+| Keys                | Does                                        |
+| ------------------- | ------------------------------------------- |
+| `alt-h/j/k/l`       | focus window left/down/up/right             |
 | `alt-shift-h/j/k/l` | **move** the focused window within the tree |
-| `alt-tab` | previous workspace (back-and-forth) |
+| `alt-tab`           | previous workspace (back-and-forth)         |
 
 ### Workspaces
-| Keys | Does |
-|---|---|
-| `alt-1` … `alt-9` | go to workspace N |
+
+| Keys                          | Does                                                  |
+| ----------------------------- | ----------------------------------------------------- |
+| `alt-1` … `alt-9`             | go to workspace N                                     |
 | `alt-shift-1` … `alt-shift-9` | send focused window to workspace N (you don't follow) |
-| bar pill click | go to that workspace |
+| bar pill click                | go to that workspace                                  |
 
 ### Layout
-| Keys | Does |
-|---|---|
-| `alt-slash` | tiles layout; press again to flip horizontal/vertical split |
-| `alt-comma` | accordion layout; press again to flip its axis |
-| `alt-f` | fullscreen the focused window (within the workspace) |
-| `alt-shift-space` | float ↔ tile the focused window |
+
+| Keys              | Does                                                        |
+| ----------------- | ----------------------------------------------------------- |
+| `alt-slash`       | tiles layout; press again to flip horizontal/vertical split |
+| `alt-comma`       | accordion layout; press again to flip its axis              |
+| `alt-f`           | fullscreen the focused window (within the workspace)        |
+| `alt-shift-space` | float ↔ tile the focused window                             |
 
 ### Resize mode
+
 `alt-r` enters **resize mode** — then plain `h/l` = narrower/wider,
 `j/k` = taller/shorter (50px steps), `esc` or `enter` to leave. Modes are
 i3's trick for not burning a zillion chords.
 
 ### Not bound (on purpose, add when needed)
+
 Multi-monitor moves (`move-node-to-monitor`), service mode (reload/flatten),
 join-with (merging windows into one split). See "Customizing" below.
 
@@ -127,6 +132,7 @@ sketchybar/items/
 ```
 
 Core concepts:
+
 - An **item** = icon + label + background, positioned left/center/right.
 - Items **subscribe to events** (`front_app_switched`, `routine` — fired
   every `update_freq` seconds, `power_source_change`, custom ones).
@@ -156,8 +162,9 @@ end)
 Then `require` it if you made a new file (items/init.lua lists modules).
 
 ### Debugging the bar
+
 - `sketchybar --reload` — restart the config without a switch (config is a
-  store path, so a *code* change still needs `just switch`).
+  store path, so a _code_ change still needs `just switch`).
 - `sketchybar --query bar` / `--query space.1` — dump an item's state as JSON.
 - Logs: `log show --last 5m --predicate 'process == "sketchybar"'` or check
   `/tmp/sketchybar_dj.err` style launchd logs via
@@ -165,6 +172,7 @@ Then `require` it if you made a new file (items/init.lua lists modules).
 - Bar gone entirely? `launchctl kickstart -k gui/$UID/org.nixos.sketchybar`.
 
 ### Theming
+
 You don't theme the bar — you theme the **palette**
 (`hosts/teakbookM5DJ/palette.nix`) and the bar follows, same as the prompt,
 tmux, and the borders. Bar-specific knobs (heights, paddings, fonts) live in

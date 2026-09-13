@@ -25,7 +25,7 @@
   # aborts activation when determinate-nixd is detected.
   nix.enable = false;
 
-  programs.zsh.enable = true;   # ensure /etc/zshrc sources the nix profile
+  programs.zsh.enable = true; # ensure /etc/zshrc sources the nix profile
 
   # nix-darwin's options manual builds an options.json via builtins.derivation
   # with an uncontexted nixpkgs path — upstream bug, warns on every eval.
@@ -42,19 +42,53 @@
 
     defaults = {
       NSGlobalDomain = {
-        AppleInterfaceStyle = "Dark";      # system-wide dark mode
+        AppleInterfaceStyle = "Dark"; # system-wide dark mode
         KeyRepeat = 2;
         InitialKeyRepeat = 15;
         ApplePressAndHoldEnabled = false;
         AppleShowAllExtensions = true;
         NSDocumentSaveNewDocumentsToCloud = false;
+        # macOS "smart" text meddling corrupts anything pasted into a form or
+        # chat that happens to be code — quotes/dashes/periods stay literal
+        NSAutomaticCapitalizationEnabled = false;
+        NSAutomaticQuoteSubstitutionEnabled = false;
+        NSAutomaticDashSubstitutionEnabled = false;
+        NSAutomaticPeriodSubstitutionEnabled = false;
+        NSAutomaticSpellingCorrectionEnabled = false;
+        # save dialogs open expanded instead of the collapsed mini panel
+        NSNavPanelExpandedStateForSaveMode = true;
+        NSNavPanelExpandedStateForSaveMode2 = true;
+        NSTableViewDefaultSizeMode = 1; # small sidebar icons
       };
 
       finder = {
-        AppleShowAllFiles = true;
+        AppleShowAllFiles = true; # needs a Finder relaunch to bite
         ShowPathbar = true;
         ShowStatusBar = true;
         FXEnableExtensionChangeWarning = false;
+        _FXShowPosixPathInTitle = true; # full path in the window title
+        FXDefaultSearchScope = "SCcf"; # search the current folder, not the Mac
+        FXPreferredViewStyle = "Nlsv"; # list view by default
+        QuitMenuItem = true; # Finder gets a real Cmd-Q
+        NewWindowTarget = "Home"; # new windows open ~, not Recents
+        _FXSortFoldersFirst = true; # folders sort above files
+      };
+
+      ActivityMonitor = {
+        ShowCategory = 100; # all processes, not just mine
+        SortColumn = "CPUUsage";
+        SortDirection = 0;
+      };
+
+      CustomUserPreferences = {
+        # keep .DS_Store droppings off network shares and USB drives
+        "com.apple.desktopservices" = {
+          DSDontWriteNetworkStores = true;
+          DSDontWriteUSBStores = true;
+        };
+        # stop offering every plugged-in disk as a backup target
+        "com.apple.TimeMachine".DoNotOfferNewDisksForBackup = true;
+        "com.apple.AdLib".allowApplePersonalizedAdvertising = false;
       };
 
       dock = {
@@ -73,6 +107,8 @@
       screencapture = {
         location = "/Users/dj/Screenshots";
         type = "png";
+        disable-shadow = true; # window shots without the huge drop shadow
+        show-thumbnail = false; # skip the floating preview; file lands instantly
       };
     };
   };
@@ -101,8 +137,8 @@
     # NOT docker — Docker Desktop is replaced by colima (home/darwin.nix);
     # the Desktop app and colima fight over the docker socket/context.
     casks = [
-      "ghostty"                  # nixpkgs' ghostty is Linux-only
-      "stats"                    # free open-source iStat Menus (exelban/stats)
+      "ghostty" # nixpkgs' ghostty is Linux-only
+      "stats" # free open-source iStat Menus (exelban/stats)
       "visual-studio-code"
       "jetbrains-toolbox"
       "insomnia"

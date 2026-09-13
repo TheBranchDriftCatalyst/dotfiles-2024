@@ -16,9 +16,12 @@ set -euo pipefail
 KEY="${SSH_KEY_PATH:-$HOME/.ssh/id_ed25519}"
 TITLE="${SSH_KEY_TITLE:-$(whoami)@$(hostname -s) $(date +%Y-%m-%d)}"
 
-ok()   { printf '\033[0;32m✔\033[0m %s\n' "$*"; }
+ok() { printf '\033[0;32m✔\033[0m %s\n' "$*"; }
 info() { printf '\033[1;34m→\033[0m %s\n' "$*"; }
-die()  { printf '\033[0;31m✖\033[0m %s\n' "$*" >&2; exit 1; }
+die() {
+  printf '\033[0;31m✖\033[0m %s\n' "$*" >&2
+  exit 1
+}
 
 # ── 1. keypair ───────────────────────────────────────────────────────────────
 if [ -f "$KEY" ]; then
@@ -33,7 +36,7 @@ PUB="$(cat "$KEY.pub")"
 # ── 2. pin github.com ────────────────────────────────────────────────────────
 touch "$HOME/.ssh/known_hosts"
 if ! grep -q "^github.com" "$HOME/.ssh/known_hosts" 2>/dev/null; then
-  ssh-keyscan -t ed25519 github.com 2>/dev/null >> "$HOME/.ssh/known_hosts"
+  ssh-keyscan -t ed25519 github.com 2>/dev/null >>"$HOME/.ssh/known_hosts"
   ok "github.com pinned in known_hosts"
 else
   ok "github.com already in known_hosts"
@@ -43,13 +46,14 @@ fi
 TOKEN="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
 if [ -z "$TOKEN" ]; then
   printf 'GitHub PAT (admin:public_key scope, input hidden): '
-  read -rs TOKEN; echo
+  read -rs TOKEN
+  echo
 fi
 [ -n "$TOKEN" ] || die "no token provided"
 
 api() {
   curl -fsS -H "Authorization: Bearer $TOKEN" \
-       -H "Accept: application/vnd.github+json" "$@"
+    -H "Accept: application/vnd.github+json" "$@"
 }
 
 # ── 4. upload (skip if this exact key is already there) ──────────────────────
@@ -59,8 +63,8 @@ if api https://api.github.com/user/keys | grep -qF "$(printf '%s' "$key_body" | 
 else
   info "uploading key as \"$TITLE\"…"
   api -X POST https://api.github.com/user/keys \
-      -d "{\"title\":\"$TITLE\",\"key\":\"$key_body\"}" >/dev/null \
-    || die "upload failed — does the PAT have admin:public_key scope?"
+    -d "{\"title\":\"$TITLE\",\"key\":\"$key_body\"}" >/dev/null ||
+    die "upload failed — does the PAT have admin:public_key scope?"
   ok "key uploaded"
 fi
 
@@ -68,6 +72,6 @@ fi
 info "verifying ssh auth…"
 out="$(ssh -o BatchMode=yes -T git@github.com 2>&1 || true)"
 case "$out" in
-  *"successfully authenticated"*) ok "GitHub SSH auth works: ${out%%!*}!" ;;
-  *) die "auth check failed: $out" ;;
+*"successfully authenticated"*) ok "GitHub SSH auth works: ${out%%!*}!" ;;
+*) die "auth check failed: $out" ;;
 esac

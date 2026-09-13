@@ -1,0 +1,31 @@
+# local k8s dev loop: tilt up
+# expects a local cluster context (kind / docker-desktop / orbstack)
+
+# guardrail: never let this Tiltfile touch a real cluster
+allow_k8s_contexts(['kind-flake-demo', 'docker-desktop', 'orbstack'])
+
+docker_build(
+    'flake-demo-backend',
+    './backend',
+    live_update=[
+        # code changes sync straight into the pod; uvicorn --reload picks them up
+        sync('./backend', '/app'),
+        # dep changes re-sync the venv inside the container
+        run('uv sync --frozen --no-dev', trigger=['./backend/pyproject.toml', './backend/uv.lock']),
+    ],
+)
+
+docker_build(
+    'flake-demo-frontend',
+    './frontend',
+    live_update=[
+        # vite HMR picks up synced source instantly
+        sync('./frontend', '/app'),
+        run('pnpm install --frozen-lockfile', trigger=['./frontend/package.json', './frontend/pnpm-lock.yaml']),
+    ],
+)
+
+k8s_yaml(['k8s/backend.yaml', 'k8s/frontend.yaml'])
+
+k8s_resource('backend', port_forwards='8000:8000')
+k8s_resource('frontend', port_forwards='5173:5173')

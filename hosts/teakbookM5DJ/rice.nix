@@ -31,7 +31,19 @@ let
       sunBot = ${c "ff" p.sunBot},
       dim = ${c "80" p.accent},
       red = 0xffff5555,
-      bar_bg = ${c "e0" p.deep},
+      -- deck (interactive popup) tokens. `hot` is the livery's hot pink,
+      -- reserved exclusively for the armed-to-kill row state — nothing else
+      -- on the bar may use it, that's what makes it read as danger.
+      hot = 0xffff2e97,
+      hover = ${c "26" p.glow},
+      -- opaque for the same reason as bar_bg: without real blur, whatever
+      -- window sits behind the popup bleeds through translucency as mush
+      popup_bg = ${c "ff" p.deep},
+      edge = ${c "59" p.glow},
+      -- fully opaque: the auto-hidden native menu bar blurs whatever sits
+      -- behind it when it slides down — over translucent neon it was
+      -- unreadable mush; over solid deep-green both bars stay legible
+      bar_bg = ${c "ff" p.deep},
       transparent = 0x00000000,
     }
   '';
@@ -49,6 +61,12 @@ let
   '';
 in
 {
+  # the mem deck's "purge now" button: purge(8) is root-only, so grant
+  # exactly that binary passwordless — nothing broader
+  security.sudo.extraConfig = ''
+    dj ALL=(root) NOPASSWD: /usr/sbin/purge
+  '';
+
   # ── AeroSpace: i3-like tiling, no SIP shenanigans (unlike yabai) ─────────
   services.aerospace = {
     enable = true;
@@ -56,12 +74,23 @@ in
       # v2: persistent-workspaces must be declared instead of being inferred
       # from the keybindings (v1 behavior, warned as outdated on every parse)
       config-version = 2;
-      persistent-workspaces = [ "1" "2" "3" "4" "5" "6" "7" "8" "9" ];
+      persistent-workspaces = [
+        "1"
+        "2"
+        "3"
+        "4"
+        "5"
+        "6"
+        "7"
+        "8"
+        "9"
+      ];
 
       after-startup-command = [ ];
       # tell sketchybar when the workspace changes (its items subscribe)
       exec-on-workspace-change = [
-        "/bin/bash" "-c"
+        "/bin/bash"
+        "-c"
         "${pkgs.sketchybar}/bin/sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE"
       ];
       default-root-container-layout = "tiles";
@@ -148,5 +177,8 @@ in
   system.defaults.NSGlobalDomain._HIHideMenuBar = true;
 
   # aerospace CLI + sketchybar on PATH for click_scripts and debugging
-  environment.systemPackages = [ pkgs.aerospace pkgs.sketchybar ];
+  environment.systemPackages = [
+    pkgs.aerospace
+    pkgs.sketchybar
+  ];
 }

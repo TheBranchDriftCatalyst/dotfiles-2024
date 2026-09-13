@@ -1,0 +1,22 @@
+# repo-local starship prompt — loaded via STARSHIP_CONFIG set in .envrc
+# visibly different from your global prompt so you can see the swap happen
+
+format = """
+[⚗️ flake-demo](bold purple) $directory$git_branch$python$nodejs$character
+"""
+
+[directory]
+truncation_length = 2
+style = "bold cyan"
+
+[python]
+symbol = "🐍 "
+format = "[$symbol$version ]($style)"
+
+[nodejs]
+symbol = "⬢ "
+format = "[$symbol$version ]($style)"
+
+[character]
+success_symbol = "[➜](bold green)"
+error_symbol = "[✗](bold red)"

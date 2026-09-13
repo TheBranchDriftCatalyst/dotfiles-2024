@@ -1,0 +1,4 @@
+# pnpm 11+ settings live here, not in package.json
+# allow esbuild's postinstall (it writes its platform binary)
+allowBuilds:
+  esbuild: true

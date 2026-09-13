@@ -15,7 +15,9 @@
 # Deploy: edit here → `just switch`.
 { config, ... }:
 
-let p = config.catalyst.palette; in
+let
+  p = config.catalyst.palette;
+in
 
 {
   programs.starship = {
@@ -43,7 +45,7 @@ let p = config.catalyst.palette; in
 
       palette = "livery";
       palettes.livery = {
-        primary = p.glow;    # the machine's neon
+        primary = p.glow; # the machine's neon
         inherit (p) accent;
         alt = p.sunBot;
         warn = p.sunTop;
@@ -197,14 +199,20 @@ let p = config.catalyst.palette; in
         empty_symbol = "🪫 ";
         format = "[$symbol$percentage]($style) ";
         display = [
-          { threshold = 10; style = "bold red"; }
-          { threshold = 30; style = "bold yellow"; }
+          {
+            threshold = 10;
+            style = "bold red";
+          }
+          {
+            threshold = 30;
+            style = "bold yellow";
+          }
         ];
       };
 
       shlvl = {
         disabled = false;
-        threshold = 2;              # only when nested — depth 1 is just life
+        threshold = 2; # only when nested — depth 1 is just life
         symbol = "🕳️ ";
         format = "[$symbol$shlvl]($style) ";
         style = "bold alt";

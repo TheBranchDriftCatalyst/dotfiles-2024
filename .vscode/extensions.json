@@ -1,0 +1,7 @@
+{
+  // Per-repo extension recommendations — VS Code offers these when the repo
+  // is opened; nothing is installed globally. GLSL pair is for
+  // home/dotfiles/ghostty-crt.glsl and future shader work (glslify itself is
+  // an npm dep in whatever project uses it, not an extension).
+  "recommendations": ["circledev.glsl-canvas", "raczzalan.webgl-glsl-editor"]
+}

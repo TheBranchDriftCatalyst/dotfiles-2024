@@ -21,16 +21,29 @@ REPO_URL="https://github.com/TheBranchDriftCatalyst/dotfiles-2024.git"
 BRANCH="${BRANCH:-nix-next}"
 
 if [ -t 1 ]; then
-  R=$'\033[0;31m'; G=$'\033[0;32m'; Y=$'\033[1;33m'; B=$'\033[1;34m'; D=$'\033[2m'; N=$'\033[0m'
+  R=$'\033[0;31m'
+  G=$'\033[0;32m'
+  Y=$'\033[1;33m'
+  B=$'\033[1;34m'
+  D=$'\033[2m'
+  N=$'\033[0m'
 else
-  R=''; G=''; Y=''; B=''; D=''; N=''
+  R=''
+  G=''
+  Y=''
+  B=''
+  D=''
+  N=''
 fi
 info() { printf '%s→%s %s\n' "$B" "$N" "$*"; }
-ok()   { printf '%s✔%s %s\n' "$G" "$N" "$*"; }
+ok() { printf '%s✔%s %s\n' "$G" "$N" "$*"; }
 warn() { printf '%s⚠%s %s\n' "$Y" "$N" "$*" >&2; }
-die()  { printf '%s✖%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
+die() {
+  printf '%s✖%s %s\n' "$R" "$N" "$*" >&2
+  exit 1
+}
 step() { printf '\n%s── %s %s%s\n' "$B" "$*" "$(printf '─%.0s' $(seq 1 $((50 - ${#1}))))" "$N"; }
-has()  { command -v "$1" >/dev/null 2>&1; }
+has() { command -v "$1" >/dev/null 2>&1; }
 
 OS="$(uname -s)"
 ARCH="$(uname -m)"
@@ -40,38 +53,39 @@ info "$OS / $ARCH"
 step "1. platform prerequisites"
 
 case "$OS" in
-  Darwin)
-    # Xcode CLT — required by the darwin stdenv even under Nix.
-    if xcode-select -p >/dev/null 2>&1; then
-      ok "Xcode Command Line Tools"
-    else
-      info "installing Xcode Command Line Tools (GUI prompt)…"
-      xcode-select --install || true
-      die "rerun this script once the CLT install finishes"
-    fi
+Darwin)
+  # Xcode CLT — required by the darwin stdenv even under Nix.
+  if xcode-select -p >/dev/null 2>&1; then
+    ok "Xcode Command Line Tools"
+  else
+    info "installing Xcode Command Line Tools (GUI prompt)…"
+    xcode-select --install || true
+    die "rerun this script once the CLT install finishes"
+  fi
 
-    # Homebrew stays: nix-darwin DRIVES brew for GUI casks, it does not
-    # replace or install it. Casks cannot be Nix packages.
-    if has brew; then
-      ok "Homebrew $(brew --version | head -1)"
-    else
-      info "installing Homebrew (needed for GUI casks)…"
-      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    fi
-    # shellcheck disable=SC2046
-    if [ "$ARCH" = "arm64" ]; then eval "$(/opt/homebrew/bin/brew shellenv)"; 
-    else eval "$(/usr/local/bin/brew shellenv)"; fi
-    ;;
+  # Homebrew stays: nix-darwin DRIVES brew for GUI casks, it does not
+  # replace or install it. Casks cannot be Nix packages.
+  if has brew; then
+    ok "Homebrew $(brew --version | head -1)"
+  else
+    info "installing Homebrew (needed for GUI casks)…"
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  fi
+  # shellcheck disable=SC2046
+  if [ "$ARCH" = "arm64" ]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  else eval "$(/usr/local/bin/brew shellenv)"; fi
+  ;;
 
-  Linux)
-    # The Nix installer needs these; nothing else is required from the distro.
-    for c in curl git xz; do
-      has "$c" || warn "missing '$c' — install it via your package manager first"
-    done
-    ok "linux prerequisites checked"
-    ;;
+Linux)
+  # The Nix installer needs these; nothing else is required from the distro.
+  for c in curl git xz; do
+    has "$c" || warn "missing '$c' — install it via your package manager first"
+  done
+  ok "linux prerequisites checked"
+  ;;
 
-  *) die "unsupported OS: $OS" ;;
+*) die "unsupported OS: $OS" ;;
 esac
 
 # ── 2. Nix ───────────────────────────────────────────────────────────────────
@@ -91,8 +105,8 @@ if has nix; then
 else
   info "installing Determinate Nix (flakes enabled by default)…"
   curl --proto '=https' --tlsv1.2 -sSf -L \
-    https://install.determinate.systems/nix \
-    | sh -s -- install --no-confirm
+    https://install.determinate.systems/nix |
+    sh -s -- install --no-confirm
   # The installer writes the profile script; this shell hasn't sourced it yet.
   if [ -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
     # shellcheck disable=SC1091
@@ -105,7 +119,7 @@ fi
 if ! nix flake --help >/dev/null 2>&1; then
   warn "flakes not enabled; adding to ~/.config/nix/nix.conf"
   mkdir -p "$HOME/.config/nix"
-  printf 'experimental-features = nix-command flakes\n' >> "$HOME/.config/nix/nix.conf"
+  printf 'experimental-features = nix-command flakes\n' >>"$HOME/.config/nix/nix.conf"
 fi
 ok "flakes available"
 
@@ -121,8 +135,8 @@ else
 fi
 
 # secret-scanning + lint hooks — the pre-commit BLOCKS commits with secrets
-git -C "$REPO_DIR" config core.hooksPath .githooks \
-  && ok "git hooks registered (.githooks — gitleaks pre-commit)"
+git -C "$REPO_DIR" config core.hooksPath .githooks &&
+  ok "git hooks registered (.githooks — gitleaks pre-commit)"
 
 # ── 4. build ─────────────────────────────────────────────────────────────────
 # Compiling the full configuration changes NOTHING on the machine — it only
@@ -132,17 +146,17 @@ step "4. build (changes nothing)"
 cd "$REPO_DIR"
 
 case "$OS" in
-  Darwin)
-    # darwin configs are named by hostname. A brand-new machine won't have a
-    # hosts/<name>/ yet — say so instead of failing cryptically.
-    TARGET="$(hostname -s)"
-    if ! grep -q "\"$TARGET\"" "$REPO_DIR/flake.nix"; then
-      warn "no darwinConfigurations.\"$TARGET\" in flake.nix —"
-      warn "create hosts/$TARGET/ (copy hosts/teakbookM5DJ) and wire it in flake.nix"
-      die  "then rerun"
-    fi
-    ;;
-  Linux)  [ "$ARCH" = "aarch64" ] && TARGET="linux-generic-arm" || TARGET="linux-generic" ;;
+Darwin)
+  # darwin configs are named by hostname. A brand-new machine won't have a
+  # hosts/<name>/ yet — say so instead of failing cryptically.
+  TARGET="$(hostname -s)"
+  if ! grep -q "\"$TARGET\"" "$REPO_DIR/flake.nix"; then
+    warn "no darwinConfigurations.\"$TARGET\" in flake.nix —"
+    warn "create hosts/$TARGET/ (copy hosts/teakbookM5DJ) and wire it in flake.nix"
+    die "then rerun"
+  fi
+  ;;
+Linux) [ "$ARCH" = "aarch64" ] && TARGET="linux-generic-arm" || TARGET="linux-generic" ;;
 esac
 
 info "building .#${TARGET} — first run downloads a lot; go get coffee…"

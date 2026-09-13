@@ -18,6 +18,10 @@
 # ─────────────────────────────────────────────────────────────────────────────
 FROM nixos/nix:latest
 
+# TODO: have this project mount example/test-flake-direnv
+# and it will be a opeorational test example of that working 
+# workflow in a linux docker env
+
 # Flakes are not on by default in this image.
 RUN mkdir -p /etc/nix && \
     printf 'experimental-features = nix-command flakes\nfilter-syscalls = false\n' \

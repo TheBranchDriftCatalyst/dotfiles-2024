@@ -4,17 +4,21 @@
 # employer email on a personal machine. Neither belongs in a public repo:
 # identity is split by directory below, and credentials go through the
 # system keychain / gh, never a config file.
-{ pkgs, lib, config, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 
-let g = config.catalyst.git; in
+let
+  g = config.catalyst.git;
+in
 
 {
   programs.git = {
     enable = true;
     lfs.enable = true;
-
-
-
 
     # One includeIf per declared context — identity follows the DIRECTORY,
     # never the machine. The mechanism is git's own conditional include;
@@ -24,9 +28,11 @@ let g = config.catalyst.git; in
     # never by attr-name luck.
     includes = map (c: {
       condition = "gitdir:${c.dir}";
-      contents = { user.email = c.email; } // c.extraConfig;
+      contents = {
+        user.email = c.email;
+      }
+      // c.extraConfig;
     }) (lib.sortOn (c: lib.stringLength c.dir) (lib.attrValues g.contexts));
-
 
     ignores = [
       ".DS_Store"
@@ -38,7 +44,7 @@ let g = config.catalyst.git; in
     # HM renamed userName/userEmail/extraConfig into `settings`.
     settings = {
       user.name = g.name;
-      user.email = g.email;   # base identity (home/contexts.nix)
+      user.email = g.email; # base identity (home/contexts.nix)
       init.defaultBranch = "main";
       push.autoSetupRemote = true;
       pull.rebase = true;
@@ -77,7 +83,7 @@ let g = config.catalyst.git; in
     enable = true;
     enableGitIntegration = true;
     options = {
-      navigate = true;         # n/N jump between files in the pager
+      navigate = true; # n/N jump between files in the pager
       line-numbers = true;
       side-by-side = true;
       syntax-theme = "livery"; # the generated bat theme (cli.nix)

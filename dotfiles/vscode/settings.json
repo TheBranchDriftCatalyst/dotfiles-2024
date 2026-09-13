@@ -1,9 +1,9 @@
 {
-    "workbench.colorTheme": "Retro Synth Cyan",
-    "terminal.integrated.mouseWheelScrollSensitivity": 3,
-    "terminal.integrated.gpuAcceleration": "off",
-    "workbench.productIconTheme": "el-vsc-v1-icons",
-    "window.density.layout": "compact",
-    "workbench.iconTheme": "material-icon-theme",
-    "claudeCode.hideOnboarding": true
+  "workbench.colorTheme": "Retro Synth Cyan",
+  "terminal.integrated.mouseWheelScrollSensitivity": 3,
+  "terminal.integrated.gpuAcceleration": "off",
+  "workbench.productIconTheme": "el-vsc-v1-icons",
+  "window.density.layout": "compact",
+  "workbench.iconTheme": "vscode-icons",
+  "claudeCode.hideOnboarding": true
 }

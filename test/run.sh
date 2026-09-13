@@ -4,26 +4,37 @@ set -u
 cd "$DOTFILES" || exit 1
 
 fails=0
-ok()   { printf '  \033[0;32m✔\033[0m %s\n' "$1"; }
-bad()  { printf '  \033[0;31m✖\033[0m %s\n' "$1"; fails=$((fails+1)); }
-check(){ d="$1"; shift; if "$@" >/dev/null 2>&1; then ok "$d"; else bad "$d"; fi; }
+ok() { printf '  \033[0;32m✔\033[0m %s\n' "$1"; }
+bad() {
+  printf '  \033[0;31m✖\033[0m %s\n' "$1"
+  fails=$((fails + 1))
+}
+check() {
+  d="$1"
+  shift
+  if "$@" >/dev/null 2>&1; then ok "$d"; else bad "$d"; fi
+}
 
 # Docker on Apple Silicon gives linux/arm64 — pick the matching output.
 case "$(uname -m)" in
-  aarch64|arm64) CFG="linux-generic-arm" ;;
-  *)             CFG="linux-generic" ;;
+aarch64 | arm64) CFG="linux-generic-arm" ;;
+*) CFG="linux-generic" ;;
 esac
 echo "══ target: .#homeConfigurations.${CFG} ($(uname -m)) ══"
 
 # POSIX sh has no pipefail: `cmd | tail` reports tail's status and masks the
 # failure. Capture to a file, test the command's own status, then show a tail.
 LOG=/tmp/step.log
-run_step() {  # run_step <desc> <cmd...>
-  d="$1"; shift
+run_step() { # run_step <desc> <cmd...>
+  d="$1"
+  shift
   if "$@" >"$LOG" 2>&1; then
-    tail -5 "$LOG"; ok "$d"
+    tail -5 "$LOG"
+    ok "$d"
   else
-    tail -40 "$LOG"; bad "$d"; exit 1
+    tail -40 "$LOG"
+    bad "$d"
+    exit 1
   fi
 }
 
@@ -33,18 +44,18 @@ run_step "flake show" nix flake show --no-write-lock-file
 echo "══ 2. activation package BUILDS ══"
 run_step "activationPackage built" \
   nix build ".#homeConfigurations.${CFG}.activationPackage" \
-    --no-write-lock-file --print-build-logs
+  --no-write-lock-file --print-build-logs
 
-echo "══ 3. activate against a real \$HOME ══"
+echo '══ 3. activate against a real $HOME ══'
 run_step "activation succeeded" ./result/activate
 
 echo "══ 4. links ══"
-check "~/.zshrc exists"        test -e "$HOME/.zshrc"
+check "~/.zshrc exists" test -e "$HOME/.zshrc"
 # ~/.zsh may exist (HM installs its zsh plugins there) but the old
 # numbered-file payload must be gone — HM initContent is the only init.
-check "no numbered zsh files"  sh -c '! ls "$HOME"/.zsh/[0-9]*.zsh >/dev/null 2>&1'
-check "git config (xdg)"       test -e "$HOME/.config/git/config"
-check "tmux.conf (xdg)"        test -e "$HOME/.config/tmux/tmux.conf"
+check "no numbered zsh files" sh -c '! ls "$HOME"/.zsh/[0-9]*.zsh >/dev/null 2>&1'
+check "git config (xdg)" test -e "$HOME/.config/git/config"
+check "tmux.conf (xdg)" test -e "$HOME/.config/tmux/tmux.conf"
 
 echo "══ 5. tools on PATH (the afx+brew replacement) ══"
 . "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh" 2>/dev/null || true
@@ -65,11 +76,11 @@ else
 fi
 
 echo "══ 7. did the zsh payload actually load? (the afx trap) ══"
-check "aliases loaded"          zsh -i -c 'alias | grep -q .'
-check "safety rails active"     zsh -i -c 'alias cp | grep -q nocorrect'
-check "setopts applied"         zsh -i -c '[[ -o autopushd ]]'
-check "spellcheck retired"      zsh -i -c '[[ ! -o correctall ]]'
-check "starship is the prompt"  zsh -i -c 'typeset -f prompt_starship_precmd >/dev/null'
+check "aliases loaded" zsh -i -c 'alias | grep -q .'
+check "safety rails active" zsh -i -c 'alias cp | grep -q nocorrect'
+check "setopts applied" zsh -i -c '[[ -o autopushd ]]'
+check "spellcheck retired" zsh -i -c '[[ ! -o correctall ]]'
+check "starship is the prompt" zsh -i -c 'typeset -f prompt_starship_precmd >/dev/null'
 
 echo
 if [ "$fails" -eq 0 ]; then

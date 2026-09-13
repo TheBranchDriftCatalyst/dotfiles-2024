@@ -1,0 +1,6 @@
+.venv/
+node_modules/
+.direnv/
+.env.local
+__pycache__/
+dist/

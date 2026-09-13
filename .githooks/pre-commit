@@ -61,7 +61,9 @@ if [ -n "$staged_nix" ]; then
 fi
 
 # ── 5. shellcheck (staged shell files, errors only) ──────────────────────────
-staged_sh=$(staged | grep -E '\.(sh|bash)$|^bootstrap\.sh$|^\.githooks/' || true)
+# .scratch/ is an archive of retired scripts — exempt from lint (gitleaks and
+# the size check above still cover it)
+staged_sh=$(staged | grep -E '\.(sh|bash)$|^bootstrap\.sh$|^\.githooks/' | grep -v '^\.scratch/' || true)
 if [ -n "$staged_sh" ] && command -v shellcheck >/dev/null 2>&1; then
   if echo "$staged_sh" | xargs shellcheck -S error 2>/dev/null; then
     ok "shellcheck clean"

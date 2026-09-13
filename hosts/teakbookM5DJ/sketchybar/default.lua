@@ -15,5 +15,12 @@ sbar.default({
     padding_right = 6,
   },
   background = { height = 24, corner_radius = 6 },
-  popup = { background = { color = colors.mid, corner_radius = 6 } },
+  popup = {
+    background = {
+      color = colors.popup_bg,
+      corner_radius = 8,
+      border_color = colors.edge,
+      border_width = 1,
+    },
+  },
 })

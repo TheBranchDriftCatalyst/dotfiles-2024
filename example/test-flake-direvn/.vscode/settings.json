@@ -1,0 +1,14 @@
+{
+  // uv-managed venv lives at .venv; the direnv extension makes sure
+  // the flake's python/node are what VS Code's terminals & tools see
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+  "python.terminal.activateEnvironment": true,
+
+  "editor.formatOnSave": true,
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+  "[typescriptreact][typescript][javascript][json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
+}

@@ -1,23 +1,17 @@
 {
-    "cSpell.words": [
-      "enhancd",
-      "localdomain",
-      "neovim",
-      "nvim"
-    ],
-    "yaml.schemas": {
-      "https://taskfile.dev/schema.json": [
-        "**/Taskfile.**.yml",
-        "**/**.Taskfile.yml",
-        "**/Taskfile.yml",
-      ]
-    },
-    "python.defaultInterpreterPath": "${userHome}/.local/share/mise/shims/python",
-        "debug.javascript.defaultRuntimeExecutable": {
-      "pwa-node": "${userHome}/.local/share/mise/shims/node"
-    },
-    "go.alternateTools": {
-      "go": "${userHome}/.local/share/mise/shims/go"
-    }
-    
+  "cSpell.words": ["enhancd", "localdomain", "neovim", "nvim"],
+  "yaml.schemas": {
+    "https://taskfile.dev/schema.json": [
+      "**/Taskfile.**.yml",
+      "**/**.Taskfile.yml",
+      "**/Taskfile.yml"
+    ]
+  },
+  "python.defaultInterpreterPath": "${userHome}/.local/share/mise/shims/python",
+  "debug.javascript.defaultRuntimeExecutable": {
+    "pwa-node": "${userHome}/.local/share/mise/shims/node"
+  },
+  "go.alternateTools": {
+    "go": "${userHome}/.local/share/mise/shims/go"
+  }
 }

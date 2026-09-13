@@ -12,7 +12,9 @@
 # aren't packaged yet — README "known gaps").
 { pkgs, config, ... }:
 
-let p = config.catalyst.palette; in
+let
+  p = config.catalyst.palette;
+in
 
 {
   programs.tmux = {
@@ -20,17 +22,17 @@ let p = config.catalyst.palette; in
     terminal = "screen-256color";
     historyLimit = 50000;
     escapeTime = 10;
-    keyMode = "emacs";       # status/prompt keys; copy-mode is vi below
+    keyMode = "emacs"; # status/prompt keys; copy-mode is vi below
     mouse = true;
     baseIndex = 1;
-    prefix = "C-t";          # the old muscle memory — C-b is unbound
+    prefix = "C-t"; # the old muscle memory — C-b is unbound
 
     plugins = with pkgs.tmuxPlugins; [
       sensible
-      yank                   # owns `y` in copy-mode → system clipboard
+      yank # owns `y` in copy-mode → system clipboard
       resurrect
       continuum
-      fzf-tmux-url           # prefix-u: fzf-pick a URL from the pane
+      fzf-tmux-url # prefix-u: fzf-pick a URL from the pane
     ];
 
     # Nix-interpolated lines stay here; everything else is a real .conf file
@@ -50,6 +52,7 @@ let p = config.catalyst.palette; in
       set -g mode-style "bg=${p.mid},fg=${p.glow}"
       set -g clock-mode-colour "${p.glow}"
 
-    '' + builtins.readFile ./dotfiles/tmux.conf;
+    ''
+    + builtins.readFile ./dotfiles/tmux.conf;
   };
 }

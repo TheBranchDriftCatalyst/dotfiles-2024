@@ -8,13 +8,34 @@
 
 {
   options.catalyst.palette = {
-    deep = lib.mkOption { type = lib.types.str; default = "#0d0221"; };
-    mid = lib.mkOption { type = lib.types.str; default = "#2b0c4a"; };
-    glow = lib.mkOption { type = lib.types.str; default = "#ff2e97"; };
-    sunTop = lib.mkOption { type = lib.types.str; default = "#ffef00"; };
-    sunBot = lib.mkOption { type = lib.types.str; default = "#ff2e97"; };
-    grid = lib.mkOption { type = lib.types.str; default = "#ff2e97"; };
-    accent = lib.mkOption { type = lib.types.str; default = "#5ee7ff"; };
+    deep = lib.mkOption {
+      type = lib.types.str;
+      default = "#0d0221";
+    };
+    mid = lib.mkOption {
+      type = lib.types.str;
+      default = "#2b0c4a";
+    };
+    glow = lib.mkOption {
+      type = lib.types.str;
+      default = "#ff2e97";
+    };
+    sunTop = lib.mkOption {
+      type = lib.types.str;
+      default = "#ffef00";
+    };
+    sunBot = lib.mkOption {
+      type = lib.types.str;
+      default = "#ff2e97";
+    };
+    grid = lib.mkOption {
+      type = lib.types.str;
+      default = "#ff2e97";
+    };
+    accent = lib.mkOption {
+      type = lib.types.str;
+      default = "#5ee7ff";
+    };
     text = lib.mkOption {
       type = lib.types.str;
       default = "Default Maxxing";

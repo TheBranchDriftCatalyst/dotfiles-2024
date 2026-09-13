@@ -65,8 +65,9 @@ let
     "nvim-treesitter" = nvim-treesitter;
   };
 
-  pluginFarm = pkgs.linkFarm "lazy-plugins"
-    (lib.mapAttrsToList (name: path: { inherit name path; }) plugins);
+  pluginFarm = pkgs.linkFarm "lazy-plugins" (
+    lib.mapAttrsToList (name: path: { inherit name path; }) plugins
+  );
 in
 {
   # NOT programs.neovim: the module generates its own init.lua, which would

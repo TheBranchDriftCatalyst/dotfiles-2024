@@ -24,8 +24,7 @@
 
 let
   repo = "${config.home.homeDirectory}/${dotfilesRepo}";
-  live = name:
-    config.lib.file.mkOutOfStoreSymlink "${repo}/dotfiles/claude/${name}";
+  live = name: config.lib.file.mkOutOfStoreSymlink "${repo}/dotfiles/claude/${name}";
 in
 {
   home.file = {

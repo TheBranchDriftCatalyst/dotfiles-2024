@@ -22,7 +22,7 @@ two of them at once**, with `~/bin` silently shadowing `$HOMEBREW_PREFIX/bin` vi
 
 Consolidating onto afx alone was impossible: **`tmux` publishes source tarballs only**, and
 **`eza` ships no darwin release assets**. nixpkgs builds both. That is the entire argument for
-this rewrite — it is the only option that removes the overlap *and* delivers a terminal that
+this rewrite — it is the only option that removes the overlap _and_ delivers a terminal that
 installs on Linux.
 
 The old system is preserved on the **`protecht`** branch and still works.
@@ -53,15 +53,15 @@ A file moves between them only when its mode changes (see the decider below).
 home-manager normally symlinks config read-only into `/nix/store`. That is correct for
 reproducibility and miserable for iteration. So:
 
-| Path | Mode | Why |
-|---|---|---|
-| `~/Library/…/Code/User/settings.json` | **live** (`mkOutOfStoreSymlink`) | VS Code writes to it at runtime |
-| `~/.claude/{settings.json, CLAUDE.md, agents/, commands/}` | **live** (`mkOutOfStoreSymlink`) | Claude Code writes via `/config`, `/memory`, `/agents` |
-| `~/.claude/hooks/` | **live** (deliberate exception) | app never writes them, but hook scripts iterate like prompts, not like nix config |
-| everything else | pure store | reproducible, read-only |
+| Path                                                       | Mode                             | Why                                                                               |
+| ---------------------------------------------------------- | -------------------------------- | --------------------------------------------------------------------------------- |
+| `~/Library/…/Code/User/settings.json`                      | **live** (`mkOutOfStoreSymlink`) | VS Code writes to it at runtime                                                   |
+| `~/.claude/{settings.json, CLAUDE.md, agents/, commands/}` | **live** (`mkOutOfStoreSymlink`) | Claude Code writes via `/config`, `/memory`, `/agents`                            |
+| `~/.claude/hooks/`                                         | **live** (deliberate exception)  | app never writes them, but hook scripts iterate like prompts, not like nix config |
+| everything else                                            | pure store                       | reproducible, read-only                                                           |
 
 **The `dotfiles/` folder is exactly the set of files that need symlinks — and
-the ability decider is: does the *application itself* write to the file?**
+the ability decider is: does the _application itself_ write to the file?**
 VS Code updates settings.json from its own UI, and you want those edits
 persisted back into this repo — so it lives in `dotfiles/` behind a live
 symlink. If only you (or nix) ever write a file, it's static config and
@@ -98,6 +98,35 @@ installs a kernel extension and can never be a Nix package.
 
 Nerd fonts, `1password-cli`, `ngrok` and `session-manager-plugin` moved to nixpkgs and are no
 longer casks.
+
+## Secrets: 1Password provisioning (new machine)
+
+The dev-secrets layer is declarative — `op` CLI from `home/packages.nix`
+(nixpkgs `_1password-cli`, cross-platform) and the `use_onepassword` direnv
+function from `home/zsh.nix`. Only authentication is manual, once per machine:
+
+**macOS**
+
+1. `just switch` — installs `op` and the 1Password app (cask, `hosts/<hostname>`).
+2. Open 1Password, sign in to the account.
+3. Settings → Developer → **Integrate with 1Password CLI** (biometric auth for `op`).
+4. Verify: `op vault list` → Touch ID prompt → vault list.
+
+**Linux**
+
+1. `just switch` — same `op` from the shared package list.
+2. Desktop flow (optional): install the 1Password app from the **vendor's**
+   deb/rpm/flatpak — nixpkgs' `_1password-gui` needs NixOS's polkit module for
+   CLI integration, which generic distros can't provide — then enable
+   Settings → Developer → CLI integration, same as macOS.
+3. Headless flow: `op account add --address <acct>.1password.com --email <email>`
+   then `eval $(op signin)` per session; or export `OP_SERVICE_ACCOUNT_TOKEN`
+   for fully non-interactive use (CI, servers).
+4. Verify: `op vault list`.
+
+Repos consume secrets by committing an `.env.tpl` of `op://` references and
+calling `use_onepassword` from `.envrc` — entering the repo materializes them
+as env vars (ESO-for-dev; naming: `op://dev/<repo-name>/<kebab-field>`).
 
 ## Status
 
