@@ -32,11 +32,30 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # own-your-packaging: catalyst-cli ships its own flake (binary + cy alias +
+    # zsh completions + fzf-tab widget); home/catalyst.nix just consumes it.
+    # git+ssh (not github:) — the repo is private; this rides the ssh agent
+    # instead of needing an API token in nix.conf.
+    catalyst-cli = {
+      url = "git+ssh://git@github.com/TheBranchDriftCatalyst/catalyst-cli.git?ref=main";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # trampoline .apps so nix-installed GUI apps index in Spotlight/Launchpad
     mac-app-util.url = "github:hraban/mac-app-util";
   };
 
-  outputs = { nixpkgs, home-manager, nix-darwin, sops-nix, nix-index-database, treefmt-nix, mac-app-util, ... }@inputs:
+  outputs =
+    {
+      nixpkgs,
+      home-manager,
+      nix-darwin,
+      sops-nix,
+      nix-index-database,
+      treefmt-nix,
+      mac-app-util,
+      ...
+    }@inputs:
     let
       # Where this repo lives. Everything that needs a live (editable) symlink
       # resolves through here — never a hardcoded /Users/<name>.
@@ -48,10 +67,12 @@
 
       # legacyPackages cannot carry config; zsh-abbr is unfree (HL3), so the
       # standalone HM targets need an explicit import with allowUnfree.
-      mkPkgs = system: import nixpkgs {
-        inherit system;
-        config.allowUnfree = true;
-      };
+      mkPkgs =
+        system:
+        import nixpkgs {
+          inherit system;
+          config.allowUnfree = true;
+        };
     in
     {
       # ── macOS ──────────────────────────────────────────────────────────────
@@ -89,25 +110,40 @@
       homeConfigurations."linux-generic" = home-manager.lib.homeManagerConfiguration {
         pkgs = mkPkgs "x86_64-linux";
         extraSpecialArgs = mkArgs "x86_64-linux";
-        modules = [ ./home ./home/linux.nix ./hosts/linux-generic nix-index-database.homeModules.nix-index ];
+        modules = [
+          ./home
+          ./home/linux.nix
+          ./hosts/linux-generic
+          nix-index-database.homeModules.nix-index
+        ];
       };
 
       homeConfigurations."linux-generic-arm" = home-manager.lib.homeManagerConfiguration {
         pkgs = mkPkgs "aarch64-linux";
         extraSpecialArgs = mkArgs "aarch64-linux";
-        modules = [ ./home ./home/linux.nix ./hosts/linux-generic nix-index-database.homeModules.nix-index ];
+        modules = [
+          ./home
+          ./home/linux.nix
+          ./hosts/linux-generic
+          nix-index-database.homeModules.nix-index
+        ];
       };
 
       # `nix fmt` formats the whole repo; `nix fmt -- --ci` checks.
-      formatter = nixpkgs.lib.genAttrs [ "aarch64-darwin" "x86_64-linux" "aarch64-linux" ] (system:
+      formatter = nixpkgs.lib.genAttrs [ "aarch64-darwin" "x86_64-linux" "aarch64-linux" ] (
+        system:
         (treefmt-nix.lib.evalModule (mkPkgs system) {
           projectRootFile = "flake.nix";
+          # .scratch/ is an archive of retired scripts (several are zsh in .sh
+          # clothing) — formatting an archive is churn, not hygiene
+          settings.global.excludes = [ ".scratch/*" ];
           programs = {
             nixfmt.enable = true;
             shfmt.enable = true;
             stylua.enable = true;
             prettier.enable = true;
           };
-        }).config.build.wrapper);
+        }).config.build.wrapper
+      );
     };
 }

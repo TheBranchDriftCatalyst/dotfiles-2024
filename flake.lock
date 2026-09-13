@@ -1,5 +1,26 @@
 {
   "nodes": {
+    "catalyst-cli": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1789329461,
+        "narHash": "sha256-xV9/tidOWm+gtzyhFXrF8hEKSratxeSwk68BUlKW1ug=",
+        "ref": "main",
+        "rev": "8caf5617d1b26b2e5c96f1a2dd19d44d805d8c6c",
+        "revCount": 48,
+        "type": "git",
+        "url": "ssh://git@github.com/TheBranchDriftCatalyst/catalyst-cli.git"
+      },
+      "original": {
+        "ref": "main",
+        "type": "git",
+        "url": "ssh://git@github.com/TheBranchDriftCatalyst/catalyst-cli.git"
+      }
+    },
     "cl-nix-lite": {
       "inputs": {
         "flake-parts": "flake-parts",
@@ -256,6 +277,7 @@
     },
     "root": {
       "inputs": {
+        "catalyst-cli": "catalyst-cli",
         "home-manager": "home-manager",
         "mac-app-util": "mac-app-util",
         "nix-darwin": "nix-darwin",
