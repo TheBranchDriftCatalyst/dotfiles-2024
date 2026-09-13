@@ -2,6 +2,7 @@
 # rendered by use_onepassword). Real values stay in gitignored .env files.
 .direnv/
 .env
+.env.local
 
 # nix build outputs
 result
