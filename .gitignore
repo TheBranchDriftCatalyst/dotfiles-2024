@@ -1,6 +1,7 @@
-# direnv — may hold tokens; never track
-.envrc
+# direnv — .envrc is committed (it holds op:// references, never values;
+# rendered by use_onepassword). Real values stay in gitignored .env files.
 .direnv/
+.env
 
 # nix build outputs
 result
