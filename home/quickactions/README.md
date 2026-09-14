@@ -36,7 +36,10 @@ User input happens via `osascript` dialogs (`display dialog`, `choose from list`
    modern Action Extensions). We match a known-good workflow's Info.plist and
    workflowMetaData key-for-key (NSRequiredContext=Finder,
    serviceApplicationBundleID/Path, `…fileSystemObject.image` input,
-   `…nothing` output, NSIconName) and they still classify as Services.
+   `…nothing` output) and they still classify as Services.
+   **Do NOT add NSIconName**: tested 2026-09 — with it present the entries
+   vanish from the Services menu entirely (macOS silently drops menu items
+   whose icon it can't resolve in this context); removing it restored them.
    Suspected remaining gate: a private registration step Automator performs on
    save. If this ever matters enough: create one action manually in Automator,
    diff every byte + the pbs domain before/after, and update this note.

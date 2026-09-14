@@ -6,7 +6,6 @@
   <array>
     <dict>
       <key>NSBackgroundColorName</key><string>background</string>
-      <key>NSIconName</key><string>NSActionTemplate</string>
       <key>NSMenuItem</key>
       <dict><key>default</key><string>@LABEL@</string></dict>
       <key>NSMessage</key><string>runWorkflowAsService</string>
