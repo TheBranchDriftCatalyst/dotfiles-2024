@@ -1,5 +1,10 @@
 {
   "model": "fable[1m]",
+  "statusLine": {
+    "type": "command",
+    "command": "$HOME/.claude/hooks/statusline.sh",
+    "padding": 0
+  },
   "hooks": {
     "PreToolUse": [
       {
