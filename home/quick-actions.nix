@@ -74,41 +74,98 @@ let
         cp $wflowPath $out/Contents/document.wflow
       '';
 
-  bundles = {
-    "Resize Image.workflow" = mkQuickAction {
+  # THE source of truth: one row per action. Everything else (bundle set,
+  # pbs enablement labels) derives from this list — add a row + a .zsh file
+  # and you're done.
+  actions = [
+    {
       name = "resize-image";
       label = "🖼 Resize Image…";
       fileTypes = [ "public.image" ];
-      script = loadScript ./quickactions/resize-image.zsh { };
-    };
-    "Convert Image.workflow" = mkQuickAction {
+      tokens = { };
+    }
+    {
       name = "convert-image";
       label = "🖼 Convert Image…";
       fileTypes = [ "public.image" ];
-      script = loadScript ./quickactions/convert-image.zsh { "@MAGICK@" = "${im}/bin/magick"; };
-    };
-    "Halve Image.workflow" = mkQuickAction {
+      tokens."@MAGICK@" = "${im}/bin/magick";
+    }
+    {
       name = "halve-image";
       label = "🖼 Halve Image (50%)";
       fileTypes = [ "public.image" ];
-      script = loadScript ./quickactions/halve-image.zsh { };
-    };
-    "Strip Metadata.workflow" = mkQuickAction {
+      tokens = { };
+    }
+    {
       name = "strip-metadata";
       label = "🕶 Strip Metadata";
       fileTypes = [ "public.image" ];
-      script = loadScript ./quickactions/strip-metadata.zsh {
-        "@EXIFTOOL@" = "${pkgs.exiftool}/bin/exiftool";
-      };
-    };
-  };
-  # Menu labels, for the pbs enablement entries (must match NSMenuItem exactly).
-  labels = [
-    "🖼 Resize Image…"
-    "🖼 Convert Image…"
-    "🖼 Halve Image (50%)"
-    "🕶 Strip Metadata"
+      tokens."@EXIFTOOL@" = "${pkgs.exiftool}/bin/exiftool";
+    }
+    {
+      name = "combine-pdfs";
+      label = "📄 Combine PDFs";
+      fileTypes = [ "com.adobe.pdf" ];
+      tokens."@QPDF@" = "${pkgs.qpdf}/bin/qpdf";
+    }
+    {
+      name = "compress-pdf";
+      label = "📄 Compress PDF";
+      fileTypes = [ "com.adobe.pdf" ];
+      tokens."@GS@" = "${pkgs.ghostscript}/bin/gs";
+    }
+    {
+      name = "convert-mp4";
+      label = "🎬 Convert to MP4";
+      fileTypes = [ "public.movie" ];
+      tokens."@FFMPEG@" = "${pkgs.ffmpeg}/bin/ffmpeg";
+    }
+    {
+      name = "compress-video";
+      label = "🎬 Compress Video";
+      fileTypes = [ "public.movie" ];
+      tokens."@FFMPEG@" = "${pkgs.ffmpeg}/bin/ffmpeg";
+    }
+    {
+      name = "extract-audio";
+      label = "🔊 Extract Audio";
+      fileTypes = [ "public.movie" ];
+      tokens."@FFMPEG@" = "${pkgs.ffmpeg}/bin/ffmpeg";
+    }
+    {
+      name = "sha256-clipboard";
+      label = "#️⃣ SHA-256 → Clipboard";
+      fileTypes = [ "public.item" ];
+      tokens = { };
+    }
+    {
+      name = "clean-zip";
+      label = "🗜 Clean Zip";
+      fileTypes = [ "public.item" ];
+      tokens = { };
+    }
+    {
+      name = "prettify-json";
+      label = "📝 Prettify JSON";
+      fileTypes = [ "public.json" ];
+      tokens."@JQ@" = "${pkgs.jq}/bin/jq";
+    }
   ];
+
+  # Derived: bundle set keyed by the action's kebab name (the menu shows
+  # NSMenuItem's label — the on-disk bundle name is invisible to users)…
+  bundles = builtins.listToAttrs (
+    map (a: {
+      name = "${a.name}.workflow";
+      value = mkQuickAction {
+        inherit (a) name label fileTypes;
+        script = loadScript (./quickactions + "/${a.name}.zsh") a.tokens;
+      };
+    }) actions
+  );
+  # …and the pbs enablement labels (must match NSMenuItem exactly — they do,
+  # by construction).
+  labels = map (a: a.label) actions;
 
   # Enablement: macOS only auto-enables actions saved by Automator itself;
   # drop-ins register but stay OFF. Stamp pbs NSServicesStatus via
