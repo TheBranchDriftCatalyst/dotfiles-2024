@@ -17,12 +17,35 @@ in
     enableZshIntegration = true;
 
     settings = {
-      # Ghostty bundles all the schemes from the old etc/iterm2 collection —
-      # "Synthwave Everything", "Synthwave Alpha", "TokyoNight Storm", "Nord",
-      # "Nordfox". Names are the display names, spaces included.
+      # Base scheme, then explicit overrides below sync the terminal to the
+      # IDE's "Retro Synth Cyan" theme (values lifted verbatim from the
+      # extension's retro-synth-cyan.json terminal.ansi* block — including
+      # its signature remaps: magenta→orange, cyan→purple). One look across
+      # VS Code and ghostty.
       theme = "Synthwave Everything";
       font-family = "Hack Nerd Font";
       font-size = 13;
+
+      background = "#000000"; # the IDE's editor black — not synthwave grey
+      foreground = "#f222ff"; # terminal.foreground: hot magenta body text
+      palette = [
+        "0=#0d0221" # black cell darker than the theme's grey — keeps bg contrast
+        "1=#f82a5d"
+        "2=#00d836"
+        "3=#e7dc60"
+        "4=#5ccaef"
+        "5=#f57f00" # theme remap: magenta slot is ORANGE
+        "6=#a57fff" # theme remap: cyan slot is PURPLE
+        "7=#f1f1f1"
+        "8=#8f8f8f"
+        "9=#f82a5d"
+        "10=#00ff00"
+        "11=#e7dc60"
+        "12=#5ccaef"
+        "13=#f57f00"
+        "14=#a57fff"
+        "15=#ffffff"
+      ];
 
       window-padding-x = 8;
       window-padding-y = 8;
@@ -30,7 +53,9 @@ in
       macos-option-as-alt = true;
 
       # ── cyber neon vibrancy ─────────────────────────────────────────────
-      background-opacity = 0.82; # acrylic glass over the desktop
+      # 0.93 (was 0.82): the IDE-black background reads DARK — the old glass
+      # let the desktop wash it toward grey. Still faintly acrylic.
+      background-opacity = 0.93;
       background-blur-radius = 24; # frosted, not muddy
       window-colorspace = "display-p3"; # wider gamut = hotter neons
       bold-is-bright = true; # bold text jumps to bright palette

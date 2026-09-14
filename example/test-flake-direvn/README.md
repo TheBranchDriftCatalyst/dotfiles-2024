@@ -1,5 +1,9 @@
 # flake + direnv dev environment demo
 
+<!-- TODO: combine this, consolidate it with the git-repo-template repository, beefed up
+with some of the githooks we see here, generic ones.  What we will do is we will have atleast a main or
+variations/branches of this git-repo-template that we will use as our basis -->
+
 Python (FastAPI) backend + React (Vite) frontend, with the entire dev
 environment declared per-repo via **nix flakes + direnv**, and a local
 k8s dev loop via **Tilt + kind**.
