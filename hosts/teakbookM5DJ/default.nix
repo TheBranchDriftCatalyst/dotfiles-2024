@@ -134,6 +134,10 @@
       upgrade = true;
     };
 
+    # mas: the CLI `brew bundle` shells out to for masApps below. Pinned
+    # explicitly rather than trusting bundle's on-demand install of it.
+    brews = [ "mas" ];
+
     # NOT docker — Docker Desktop is replaced by colima (home/darwin.nix);
     # the Desktop app and colima fight over the docker socket/context.
     casks = [
@@ -162,6 +166,8 @@
     masApps = {
       Fantastical = 975937182;
       Yoink = 457622435;
+      # no cask exists and it's not in nixpkgs — MAS is the only managed lane
+      PDFgear = 6469021132;
     };
   };
 
