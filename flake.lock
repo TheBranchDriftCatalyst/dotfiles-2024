@@ -7,11 +7,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789350138,
-        "narHash": "sha256-Bfw0yXSLxHbRkgRJ9gRU+PJ0n3q919DFdxnRazS+kEA=",
+        "lastModified": 1789355840,
+        "narHash": "sha256-z0BnkB8zB9uWXgoeAcWTxkIWWNlbExkBv1KuZ04K2o0=",
         "ref": "main",
-        "rev": "33745a2e3123df2bdf62508da913e4ceaf791d41",
-        "revCount": 52,
+        "rev": "e9cf0dd796a562a45c28e130cb024f38a4eb324e",
+        "revCount": 54,
         "type": "git",
         "url": "ssh://git@github.com/TheBranchDriftCatalyst/catalyst-cli.git"
       },
