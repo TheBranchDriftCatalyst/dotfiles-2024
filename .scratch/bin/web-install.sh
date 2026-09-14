@@ -1,1 +1,0 @@
-# This is to install the releases object only into the path
