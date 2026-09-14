@@ -8,7 +8,10 @@
 set -uo pipefail
 
 in=$(cat)
-command -v jq >/dev/null 2>&1 || { printf '🌴 Claude'; exit 0; }
+command -v jq >/dev/null 2>&1 || {
+  printf '🌴 Claude'
+  exit 0
+}
 j() { printf '%s' "$in" | jq -r "$1" 2>/dev/null; }
 
 model=$(j '.model.display_name // .model.id // "Claude"')
@@ -37,7 +40,8 @@ if [ -n "$used_pct" ]; then
   size=$(j '.context_window.context_window_size // 0')
   used_tok=$(j '.context_window.total_input_tokens // 0')
   # gauge: 5 cells, colored by headroom — green <50%, yellow <80%, red beyond
-  cells=$(((used_pct + 10) / 20)); [ "$cells" -gt 5 ] && cells=5
+  cells=$(((used_pct + 10) / 20))
+  [ "$cells" -gt 5 ] && cells=5
   bar=""
   for i in 1 2 3 4 5; do
     if [ "$i" -le "$cells" ]; then bar+="▰"; else bar+="▱"; fi
@@ -57,7 +61,7 @@ if [ -n "$raw_dir" ] && git -C "$raw_dir" rev-parse --git-dir >/dev/null 2>&1; t
   git_seg=$(printf ' \033[35m %s%s\033[0m' "$br" "$dirty")
   # catalyst branch shape <type>/<KEY>/<slug> → surface the ticket key
   case "$br" in
-    */*/*) ticket_seg=$(printf ' \033[33m🎫 %s\033[0m' "$(printf '%s' "$br" | cut -d/ -f2)") ;;
+  */*/*) ticket_seg=$(printf ' \033[33m🎫 %s\033[0m' "$(printf '%s' "$br" | cut -d/ -f2)") ;;
   esac
 fi
 
