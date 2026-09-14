@@ -1,0 +1,111 @@
+jira:
+  # TODO: this needs to move to orgs.<org_name>.ticketing[].provider: jira
+  # catalyst will use beads that are linked per repo AND Maybe eventually linear
+  # note that ticketing is an array so we could define multiple at once but we
+  # will only do 1 for now
+  base_url: https://protecht-inc.atlassian.net
+  cloud_id: d115aa5b-161c-4213-9470-930ea4e8db8b
+  email: h.daniels@helloteak.com
+  token: '{env.JIRA_TOKEN}'
+  story_points_field: customfield_10025
+github:
+  token: '{env.GH_TOKEN}'
+defaults:
+  repo: protecht-platform
+  base: develop
+paths:
+  worktree: '{homebase}/{org}/worktrees/{repo}/{key}'
+  ticket: '{homebase}/{org}/tickets/{key}'
+  archive: '{homebase}/{org}/tickets/archive/{sprint}/{key}'
+  bare: '{homebase}/{org}/.cache/{repo}.git'
+notify:
+  mentions:
+    - daniels
+    - thebranchdriftcatalyst
+    - dj
+k8s:
+  domain: dev.local
+  app_ports:
+    protecht-platform: 8000
+  app_env:
+    protecht-platform:
+      NGROK_ALLOWED_HOST: '{host}'
+  app_databases:
+    protecht-platform:
+      cluster: postgres
+      namespace: teak-dev
+      owner: user
+  context: k3d-teak-dev
+  clusters:
+    talos:
+      context: teak-talos-dev
+      domain: teak.talos00
+      kubeconfig: kubeconfigs/talos.yaml
+      registry: registry.talos00
+      registry_user: djdanielsh@gmail.com
+      registry_token: '{env.TALOS_REGISTRY_TOKEN}'
+      namespace: teak-talos-dev
+telemetry:
+  enabled: true
+orgs:
+  teak:
+    repos:
+      api-claim:
+        url: git@github.com:TicketGuardian/API-Claim.git
+        default_base: develop
+        jira_project: DEV
+      claims-dashboard:
+        url: git@github.com:TicketGuardian/claims-dashboard.git
+        default_base: master
+      client-dashboard:
+        url: git@github.com:TicketGuardian/Client-Dashboard.git
+        default_base: main
+      developer-tools:
+        url: git@github.com:TicketGuardian/developer-tools.git
+        default_base: main
+      # name is dash-cased: a dot in a repo NAME would collide with the dotted-path
+      # config engine (repos.hi.events.url). The URL keeps its real spelling.
+      hi-events:
+        url: git@github.com:TicketGuardian/Hi.Events.git
+      howitzarr:
+        url: git@github.com:TicketGuardian/howitzarr.git
+        default_base: main
+      icw-v3:
+        url: git@github.com:TicketGuardian/ICW-V3.git
+      icw-v4:
+        url: git@github.com:TicketGuardian/icw-v4.git
+        default_base: main
+      infrastructure-live:
+        url: git@github.com:TicketGuardian/infrastructure-live.git
+        default_base: main
+      k8s:
+        url: git@github.com:TicketGuardian/teak-platform-dev.git
+        default_base: main
+      monorepo:
+        url: git@github.com:TicketGuardian/monorepo.git
+        default_base: main
+      performance-testing:
+        url: git@github.com:TicketGuardian/performance-testing.git
+        default_base: main
+      playwright-tests:
+        url: git@github.com:TicketGuardian/playwright-tests.git
+        default_base: main
+        jira_project: DEV
+      protecht-platform:
+        url: git@github.com:TicketGuardian/protecht-platform.git
+        default_base: develop
+        jira_project: DEV
+      protecht-reporting:
+        url: git@github.com:TicketGuardian/protecht-reporting.git
+        default_base: main
+      user-forms:
+        url: git@github.com:TicketGuardian/User-Forms.git
+  catalyst:
+    repos:
+      git-repo-template:
+        url: git@github.com:TheBranchDriftCatalyst/git-repo-template.git
+        default_base: main
+beads:
+  # TODO no this needs to be per repo....
+  # each repo owns its own beads folder right dawg???
+  dir: /Users/dj/devspace/.catalyst-cli
