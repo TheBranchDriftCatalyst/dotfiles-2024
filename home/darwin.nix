@@ -26,6 +26,10 @@ let
   wallpaper = "${config.home.homeDirectory}/Pictures/catalyst-${palHash}.png";
 in
 {
+  # Finder right-click Quick Actions (image resize/convert/halve) — .workflow
+  # bundles generated from nix, no Automator involved.
+  imports = [ ./quick-actions.nix ];
+
   # Container runtime: colima (replaces Docker Desktop, which self-destructed
   # mid-session). `colima start --kubernetes` gives k3s inside the VM —
   # replacing minikube/k3d from the old setup.
