@@ -105,6 +105,15 @@ orgs:
       git-repo-template:
         url: git@github.com:TheBranchDriftCatalyst/git-repo-template.git
         default_base: main
+      catalyst-cli:
+        url: git@github.com:TheBranchDriftCatalyst/catalyst-cli.git
+        path: /Users/dj/devspace/.catalyst-cli
+        default_base: main
+      dotfiles:
+        url: git@github.com:TheBranchDriftCatalyst/dotfiles-2024.git
+        path: /Users/dj/.dotfiles
+        default_base: main
+    mode: persistent
 beads:
   # TODO no this needs to be per repo....
   # each repo owns its own beads folder right dawg???
