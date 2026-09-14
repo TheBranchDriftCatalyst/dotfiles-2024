@@ -16,12 +16,3 @@ result-*
 
 # root-owned droppings from sudo darwin-rebuild/nh runs in-repo
 .cache/
-
-# .scratch is an ARCHIVE of retired scripts — sources welcome, compiled
-# binaries are not (this repo once carried 39MB of caches; never again)
-.scratch/bin/catalystTest
-.scratch/bin/clean_branches
-.scratch/bin/multiProcCLI
-.scratch/bin/stor
-.scratch/bin/unstor
-.scratch/bin/wipctl
