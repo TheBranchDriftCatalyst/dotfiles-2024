@@ -102,6 +102,35 @@ let
       };
     };
   };
+  # Menu labels, for the pbs enablement entries (must match NSMenuItem exactly).
+  labels = [
+    "🖼 Resize Image…"
+    "🖼 Convert Image…"
+    "🖼 Halve Image (50%)"
+    "🕶 Strip Metadata"
+  ];
+
+  # Enablement: macOS only auto-enables actions saved by Automator itself;
+  # drop-ins register but stay OFF. Stamp pbs NSServicesStatus via
+  # export → plistlib merge → import (defaults -dict-add corrupts non-ASCII
+  # labels). See quickactions/README.md for the full lore.
+  enableScript = pkgs.writeText "enable-quick-actions.py" ''
+    import plistlib, subprocess, sys
+    raw = subprocess.run(["defaults", "export", "pbs", "-"], capture_output=True, check=True).stdout
+    d = plistlib.loads(raw) if raw.strip() else {}
+    svc = d.setdefault("NSServicesStatus", {})
+    entry = {"enabled_context_menu": True, "enabled_services_menu": True,
+             "presentation_modes": {"ContextMenu": True, "ServicesMenu": True}}
+    changed = False
+    for label in ${builtins.toJSON labels}:
+        key = f"(null) - {label} - runWorkflowAsService"
+        if svc.get(key) != entry:
+            svc[key] = dict(entry)
+            changed = True
+    if changed:
+        p = subprocess.run(["defaults", "import", "pbs", "-"], input=plistlib.dumps(d))
+        sys.exit(p.returncode)
+  '';
 in
 {
   # magick on PATH generally too — the convert action pins the store path,
@@ -112,7 +141,7 @@ in
   ];
 
   # Idempotent wipe-and-copy per managed bundle (see header: copies, never
-  # symlinks); unmanaged bundles are left alone.
+  # symlinks); unmanaged bundles are left alone. Then enable + rescan.
   home.activation.installQuickActions = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     svc="$HOME/Library/Services"
     $DRY_RUN_CMD mkdir -p "$svc"
@@ -123,7 +152,9 @@ in
         $DRY_RUN_CMD chmod -R u+w "$svc/${dest}"
       '') bundles
     )}
+    $DRY_RUN_CMD /usr/bin/python3 ${enableScript} || true
     # Re-register with the Services scanner so the menu updates without re-login.
+    $DRY_RUN_CMD killall pbs 2>/dev/null || true
     $DRY_RUN_CMD /System/Library/CoreServices/pbs -update || true
   '';
 }
