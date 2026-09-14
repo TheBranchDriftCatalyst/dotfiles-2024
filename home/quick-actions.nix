@@ -165,20 +165,34 @@ let
       ${notify "Halved $n image(s)"}
     '';
   };
+  bundles = {
+    "Resize Image.workflow" = resizeImage;
+    "Convert Image.workflow" = convertImage;
+    "Halve Image.workflow" = halveImage;
+  };
 in
 {
   # magick on PATH generally too — the convert action pins the store path,
   # but having it interactive matches the "image tooling lives here" intent.
   home.packages = [ im ];
 
-  home.file = {
-    "Library/Services/Resize Image.workflow".source = resizeImage;
-    "Library/Services/Convert Image.workflow".source = convertImage;
-    "Library/Services/Halve Image.workflow".source = halveImage;
-  };
-
-  # Register with the Services scanner so the menu updates without re-login.
-  home.activation.refreshQuickActions = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  # COPY, never home.file-symlink: the Quick Actions gallery walks
+  # ~/Library/Services with lstat semantics, so a symlinked bundle is never
+  # a directory to it and gets silently ignored (pbs registers it as a
+  # legacy Service, but it never reaches the Quick Actions menu/gallery) —
+  # same bug class mac-app-util exists for with .app launchers. Idempotent
+  # wipe-and-copy per managed bundle; unmanaged bundles are left alone.
+  home.activation.installQuickActions = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    svc="$HOME/Library/Services"
+    $DRY_RUN_CMD mkdir -p "$svc"
+    ${lib.concatStringsSep "\n" (
+      lib.mapAttrsToList (dest: src: ''
+        $DRY_RUN_CMD rm -rf "$svc/${dest}"
+        $DRY_RUN_CMD cp -RL ${src} "$svc/${dest}"
+        $DRY_RUN_CMD chmod -R u+w "$svc/${dest}"
+      '') bundles
+    )}
+    # Re-register with the Services scanner so the menu updates without re-login.
     $DRY_RUN_CMD /System/Library/CoreServices/pbs -update || true
   '';
 }
