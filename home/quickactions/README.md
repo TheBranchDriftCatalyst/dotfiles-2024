@@ -41,6 +41,15 @@ User input happens via `osascript` dialogs (`display dialog`, `choose from list`
    save. If this ever matters enough: create one action manually in Automator,
    diff every byte + the pbs domain before/after, and update this note.
 
+4. **The "modern" route was evaluated and rejected (2026-09).** Shortcuts-app
+   quick actions DO land in the real Quick Actions row, and a hand-built
+   unsigned `.shortcut` plist (Run Shell Script + `WFQuickActionSurfaces:
+[Finder]`) assembles fine — but importing one requires `shortcuts sign`,
+   which hard-requires an iCloud sign-in this machine doesn't have (and the
+   Shortcuts DB can't be provisioned as files). Native Action Extensions need
+   a signed Xcode app. So: Services submenu it is — one submenu deeper,
+   zero manual steps, fully reproducible from `just switch`.
+
 Debugging kit:
 
 ```
