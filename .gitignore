@@ -16,3 +16,5 @@ result-*
 
 # root-owned droppings from sudo darwin-rebuild/nh runs in-repo
 .cache/
+# local pre-nix backup of the old dotbot repo (278M) — never commit
+.scratch/dotfiles/

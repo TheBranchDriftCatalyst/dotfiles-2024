@@ -104,6 +104,32 @@
         ];
       };
 
+      darwinConfigurations."catalystM5" = nix-darwin.lib.darwinSystem {
+        system = "aarch64-darwin";
+        specialArgs = mkArgs "aarch64-darwin";
+        modules = [
+          ./hosts/catalystM5
+          sops-nix.darwinModules.sops
+          mac-app-util.darwinModules.default
+          home-manager.darwinModules.home-manager
+          {
+            home-manager = {
+              useGlobalPkgs = true;
+              useUserPackages = true;
+              extraSpecialArgs = mkArgs "aarch64-darwin";
+              users.panda.imports = [
+                ./home
+                ./home/darwin.nix
+                ./hosts/catalystM5/home.nix
+                nix-index-database.homeModules.nix-index
+              ];
+              # Move aside any pre-existing file rather than failing activation.
+              backupFileExtension = "hm-bak";
+            };
+          }
+        ];
+      };
+
       # ── Linux (standalone home-manager — works on ANY distro) ──────────────
       # Generic by design: for borrowed boxes and containers, not a specific
       # machine.   home-manager switch --flake .#linux-generic
