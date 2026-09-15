@@ -18,3 +18,9 @@ result-*
 .cache/
 # local pre-nix backup of the old dotbot repo (278M) — never commit
 .scratch/dotfiles/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
