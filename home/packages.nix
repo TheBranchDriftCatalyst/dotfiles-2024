@@ -49,6 +49,7 @@
     # ── containers & k8s ─────────────────────────────────────────────────
     kubectl
     kubectx
+    k3d # local k3s-in-docker — .dev-cluster's runtime (scripts/setup.sh)
     kubernetes-helm
     kustomize
     k9s
