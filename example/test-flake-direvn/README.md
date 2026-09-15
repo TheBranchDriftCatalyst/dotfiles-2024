@@ -92,10 +92,22 @@ cluster's Connect token at the same `dev` vault and both sides consume
 the same items.
 
 Failure is soft by design: op missing / signed out / no CLI integration →
-the shell still loads, secrets just don't, with a warning. `.env.local`
+the shell still loads, secrets just don't, with a warning (falling back
+to the last cached render, loudly marked STALE, if one exists). `.env.local`
 (gitignored) remains for un-vaulted local overrides and wins over vault
 values. One-time per machine: 1Password app → Settings → Developer →
 "Integrate with 1Password CLI".
+
+The render is **cached**: the first load prompts Touch ID and writes
+`.direnv/op-env.env.tpl.cache` (0600, gitignored); every later load —
+shell entry, `direnv reload`, VS Code's direnv extension — sources the
+cache with no `op` call and no prompt, so agents can run unattended.
+Editing `.env.tpl` re-renders automatically (mtime check). Rotating a
+value **in the vault** is invisible to mtime — force it:
+
+```sh
+rm .direnv/op-env.*.cache && direnv reload
+```
 
 ## Gotchas
 

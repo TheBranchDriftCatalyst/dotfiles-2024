@@ -320,6 +320,11 @@
       # use_onepassword [template] — render op:// refs into exported env.
       # Degrades to a warning (never a broken shell) when op is missing,
       # signed out, or the template is absent.
+      # The render is cached in .direnv/ (0600, gitignored everywhere via
+      # global core.excludesfile) so only the first load — or a template
+      # edit — costs a biometric prompt; every other load sources the
+      # cache with no op call. Rotated vault values are invisible to the
+      # mtime check: `rm .direnv/op-env.*.cache && direnv reload`.
       use_onepassword() {
         local tpl="''${1:-.env.tpl}"
         if [[ ! -f "$tpl" ]]; then
@@ -327,22 +332,39 @@
           return 0
         fi
         watch_file "$tpl"
+        # do NOT watch_file the cache (or use stdlib dotenv(), which
+        # watch_files its input) — direnv would reload on every re-render.
+        # The template (watched above) is the only correct reload trigger.
+        local base="''${tpl##*/}"
+        local cache=".direnv/op-env.''${base#.}.cache"
+        if [[ -f "$cache" && ! "$tpl" -nt "$cache" ]]; then
+          eval "$("''${direnv:-direnv}" dotenv bash "$cache")"
+          log_status "1password: loaded $(grep -c '^[A-Za-z_][A-Za-z0-9_]*=' "$cache") secret(s) from cache (rm $cache to re-render)"
+          return 0
+        fi
         if ! has op; then
-          log_error "use_onepassword: op CLI not on PATH — secrets NOT loaded"
+          if [[ -f "$cache" ]]; then
+            eval "$("''${direnv:-direnv}" dotenv bash "$cache")"
+            log_error "use_onepassword: op CLI not on PATH — loaded STALE cache $cache"
+          else
+            log_error "use_onepassword: op CLI not on PATH — secrets NOT loaded"
+          fi
           return 0
         fi
         # render to a real temp file: dotenv <(…) loses the fd before
         # direnv's binary opens it and silently loads nothing (mktemp is
-        # 0600; secrets touch disk only for the ms between render and rm)
+        # 0600, matching the installed cache)
         local tmp
         tmp="$(mktemp -t op-env.XXXXXXXX)"
-        # >/dev/null: op prints the -o path to stdout. And do NOT use the
-        # stdlib dotenv() here — it watch_files its input; watching a
-        # deleted temp file makes direnv reload on EVERY prompt. The
-        # template (watched above) is the only correct reload trigger.
+        # >/dev/null: op prints the -o path to stdout
         if op inject -f -i "$tpl" -o "$tmp" >/dev/null 2>"$tmp.err"; then
-          eval "$("''${direnv:-direnv}" dotenv bash "$tmp")"
-          log_status "1password: loaded $(grep -c '^[A-Za-z_][A-Za-z0-9_]*=' "$tmp") secret(s) from $tpl"
+          mkdir -p .direnv
+          install -m 600 "$tmp" "$cache"
+          eval "$("''${direnv:-direnv}" dotenv bash "$cache")"
+          log_status "1password: rendered $(grep -c '^[A-Za-z_][A-Za-z0-9_]*=' "$cache") secret(s) from $tpl → cached"
+        elif [[ -f "$cache" ]]; then
+          eval "$("''${direnv:-direnv}" dotenv bash "$cache")"
+          log_error "use_onepassword: op inject failed: $(head -1 "$tmp.err" 2>/dev/null) — loaded STALE cache"
         else
           log_error "use_onepassword: op inject failed: $(head -1 "$tmp.err" 2>/dev/null) — secrets NOT loaded"
         fi

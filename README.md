@@ -128,6 +128,13 @@ Repos consume secrets by committing an `.env.tpl` of `op://` references and
 calling `use_onepassword` from `.envrc` — entering the repo materializes them
 as env vars (ESO-for-dev; naming: `op://dev/<repo-name>/<kebab-field>`).
 
+The render is cached per-repo in `.direnv/op-env.<tpl>.cache` (0600, gitignored
+via the global excludesfile), so the biometric prompt only fires on the first
+load or after a template edit (mtime check) — every other direnv reload sources
+the cache without touching `op`, which lets agents run unattended. Rotated
+vault values are invisible to mtime: `rm .direnv/op-env.*.cache && direnv reload`
+to force a re-render.
+
 ## Status
 
 Skeleton written; **not yet validated** — Nix is not installed on this machine, so nothing here
