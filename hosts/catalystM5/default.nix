@@ -5,12 +5,9 @@
 { pkgs, ... }:
 
 {
-  # Rice stack (AeroSpace + JankyBorders + SketchyBar) is scaffolded in
-  # ./rice.nix but NOT imported yet — it rewrites the whole desktop and
-  # would land in the same switch as the dotbot->nix cutover. Enable it in
-  # a later, separate switch once the base config is proven:
-  #   imports = [ ./rice.nix ];
-  imports = [ ];
+  # Rice stack (AeroSpace + JankyBorders + SketchyBar) — tiling WM + focus
+  # glow + menu-bar replacement, all colored from palette.nix
+  imports = [ ./rice.nix ];
 
   nixpkgs = {
     hostPlatform = "aarch64-darwin";
