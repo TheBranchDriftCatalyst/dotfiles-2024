@@ -171,9 +171,13 @@ let
   # drop-ins register but stay OFF. Stamp pbs NSServicesStatus via
   # export → plistlib merge → import (defaults -dict-add corrupts non-ASCII
   # labels). See quickactions/README.md for the full lore.
+  # `defaults` is called by ABSOLUTE path: home-manager activation runs with a
+  # restricted PATH that excludes /usr/bin, so a bare `defaults` raises
+  # FileNotFoundError and the enablement silently no-ops (the caller ends in
+  # `|| true`). Same reason the invocation below uses /usr/bin/python3.
   enableScript = pkgs.writeText "enable-quick-actions.py" ''
     import plistlib, subprocess, sys
-    raw = subprocess.run(["defaults", "export", "pbs", "-"], capture_output=True, check=True).stdout
+    raw = subprocess.run(["/usr/bin/defaults", "export", "pbs", "-"], capture_output=True, check=True).stdout
     d = plistlib.loads(raw) if raw.strip() else {}
     svc = d.setdefault("NSServicesStatus", {})
     entry = {"enabled_context_menu": True, "enabled_services_menu": True,
@@ -185,7 +189,7 @@ let
             svc[key] = dict(entry)
             changed = True
     if changed:
-        p = subprocess.run(["defaults", "import", "pbs", "-"], input=plistlib.dumps(d))
+        p = subprocess.run(["/usr/bin/defaults", "import", "pbs", "-"], input=plistlib.dumps(d))
         sys.exit(p.returncode)
   '';
 in
