@@ -151,7 +151,10 @@
       "1password"
       "gpg-suite"
       "firefox"
-      "google-chrome"
+      # NOT google-chrome — Addigy (MDM) deploys it root-owned into
+      # /Applications; brew's upgrade needs sudo it can't prompt for during
+      # activation, so every switch fails. Addigy + Chrome's own updater keep
+      # it current.
       "alfred"
       "rectangle-pro"
       "obsidian"
