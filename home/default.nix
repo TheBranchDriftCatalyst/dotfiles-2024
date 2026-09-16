@@ -14,7 +14,6 @@
     ./git.nix
     ./tmux.nix
     ./starship.nix
-    ./mise.nix
     ./neovim.nix
     ./catalyst.nix
     ./ghostty.nix
@@ -68,10 +67,5 @@
   home.sessionPath = [
     "$HOME/bin"
     "$HOME/.local/bin"
-    # mise shims: `mise activate` only injects PATH via interactive-shell
-    # hooks, which GUI-launched processes (VS Code extension host) never run.
-    # Shims are static and resolve the pinned version per-cwd, so editors see
-    # project runtimes too.
-    "$HOME/.local/share/mise/shims"
   ];
 }
