@@ -14,6 +14,11 @@
 { pkgs, ... }:
 
 let
+  # ONE-FLIP TOGGLE: false = Rectangle Pro era (cask, default.nix) — aerospace
+  # service off, workspace pills off. Flip to true to return to tiling;
+  # everything below is kept intact for that day.
+  tiling = false;
+
   p = import ./palette.nix;
   # sketchybar/borders want 0xAARRGGBB; palette carries #RRGGBB
   c = alpha: hex: "0x${alpha}${builtins.substring 1 6 hex}";
@@ -51,6 +56,7 @@ let
     return {
       font = "Hack Nerd Font",
       aerospace = "${pkgs.aerospace}/bin/aerospace",
+      tiling = ${if tiling then "true" else "false"},
     }
   '';
   sketchybarConfig = pkgs.runCommand "sketchybar-lua-config" { } ''
@@ -69,7 +75,7 @@ in
 
   # ── AeroSpace: i3-like tiling, no SIP shenanigans (unlike yabai) ─────────
   services.aerospace = {
-    enable = true;
+    enable = tiling;
     settings = {
       # v2: persistent-workspaces must be declared instead of being inferred
       # from the keybindings (v1 behavior, warned as outdated on every parse)
