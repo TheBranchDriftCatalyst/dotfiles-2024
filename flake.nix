@@ -43,6 +43,12 @@
 
     # trampoline .apps so nix-installed GUI apps index in Spotlight/Launchpad
     mac-app-util.url = "github:hraban/mac-app-util";
+
+    # daily-updated vscode marketplace + open-vsx extensions (80k+ extensions)
+    nix-vscode-extensions = {
+      url = "github:nix-community/nix-vscode-extensions";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -54,6 +60,7 @@
       nix-index-database,
       treefmt-nix,
       mac-app-util,
+      nix-vscode-extensions,
       ...
     }@inputs:
     let
@@ -113,6 +120,9 @@
           mac-app-util.darwinModules.default
           home-manager.darwinModules.home-manager
           {
+            # Add vscode-extensions overlay so home-manager can use it
+            nixpkgs.overlays = [ nix-vscode-extensions.overlays.default ];
+
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
