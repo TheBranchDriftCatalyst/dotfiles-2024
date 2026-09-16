@@ -89,8 +89,14 @@ export BAT_PAGER='less -RF'
 # memory, rebuilt on zoxide's frecency db + fzf). With args, cd behaves
 # normally; zoxide keeps learning either way.
 cd() {
-  if (( $# == 0 )) && whence __zoxide_zi >/dev/null 2>&1; then
-    __zoxide_zi
+  # The picker is only reachable when the frecency db has something in it.
+  # On a fresh machine it is EMPTY, and __zoxide_zi then exits 1 with
+  # "zoxide: no match found" — which broke bare `cd` entirely, and could not
+  # self-heal because `cd` is how the db gets populated. Fall through to
+  # builtin cd (no args -> $HOME) until there is history to pick from.
+  if (( $# == 0 )) && whence __zoxide_zi >/dev/null 2>&1 \
+     && [[ -n "$(zoxide query -l 2>/dev/null)" ]]; then
+    __zoxide_zi || return 0   # Esc / empty selection: stay put, don't error
   else
     builtin cd "$@"
   fi
