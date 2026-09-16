@@ -28,7 +28,12 @@ in
 {
   # Finder right-click Quick Actions (image resize/convert/halve) — .workflow
   # bundles generated from nix, no Automator involved.
-  imports = [ ./quick-actions.nix ];
+  imports = [
+    ./quick-actions.nix
+    # Keyboard remapping. macOS-only by nature — the app is a system-extension
+    # cask, declared in hosts/<host>/default.nix.
+    ./karabiner.nix
+  ];
 
   # Container runtime: colima (replaces Docker Desktop, which self-destructed
   # mid-session). `colima start --kubernetes` gives k3s inside the VM —

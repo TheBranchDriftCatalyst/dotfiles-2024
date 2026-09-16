@@ -165,6 +165,8 @@
 
       # Kernel/system extensions — these can NEVER be Nix packages.
       "little-snitch"
+      # virtual HID driver; its config is managed in home/karabiner.nix
+      "karabiner-elements"
     ];
 
     masApps = {
