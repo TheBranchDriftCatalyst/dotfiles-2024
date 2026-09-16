@@ -16,6 +16,7 @@
     ./starship.nix
     ./neovim.nix
     ./catalyst.nix
+    ./kube.nix
     ./ghostty.nix
     ./vscode.nix
     ./claude.nix
