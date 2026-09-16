@@ -1,10 +1,4 @@
 {
-  "model": "fable[1m]",
-  "statusLine": {
-    "type": "command",
-    "command": "$HOME/.claude/hooks/statusline.sh",
-    "padding": 0
-  },
   "hooks": {
     "PreToolUse": [
       {
@@ -17,6 +11,11 @@
         ]
       }
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "$HOME/.claude/hooks/statusline.sh",
+    "padding": 0
   },
   "enabledPlugins": {
     "atlassian@claude-plugins-official": true,
@@ -53,5 +52,9 @@
   },
   "tui": "fullscreen",
   "theme": "dark",
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "git": {
+    "includeCoAuthoredBy": false,
+    "includeSessionTrailer": false
+  }
 }
