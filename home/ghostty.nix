@@ -69,6 +69,16 @@ in
       selection-foreground = "#f8f8f2";
       unfocused-split-opacity = 0.65;
 
+      # Split pane dividers. The option is `split-divider-color` — there is
+      # no thickness knob; ghostty draws the divider one border-width wide
+      # and scales it with the display.
+      window-decoration = true;
+      split-divider-color = p.glow; # neon divider to match cursor
+      # The unfocused-split dim overlay is documented to default to the
+      # background, but has been reported to pick up the divider colour once
+      # that is set (a bright wash over unfocused panes). Pin it explicitly.
+      unfocused-split-fill = "#000000";
+
       # Ghostty has no plugin system (by design) — custom GLSL shaders are
       # the extension point. This one is a restrained CRT pass; remove the
       # line to disable.
