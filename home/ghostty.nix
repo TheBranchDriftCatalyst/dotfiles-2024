@@ -27,7 +27,11 @@ in
       font-size = 13;
 
       background = "#000000"; # the IDE's editor black — not synthwave grey
-      foreground = "#f222ff"; # terminal.foreground: hot magenta body text
+      # livery primary as body text, muted: p.glow (#39ff14) blended ~30%
+      # toward silver — full-sat neon glares as body copy; this keeps the
+      # TEAK green identity at ~13:1 on the black ground. Pure glow stays
+      # reserved for the cursor.
+      foreground = "#62ec48";
       palette = [
         "0=#0d0221" # black cell darker than the theme's grey — keeps bg contrast
         "1=#f82a5d"
