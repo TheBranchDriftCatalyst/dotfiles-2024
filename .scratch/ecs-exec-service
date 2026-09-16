@@ -1,0 +1,24 @@
+#!/bin/bash
+#
+# Open an interactive shell inside the running ECS task for a service,
+# via saml2aws-brokered credentials.
+#
+# Infra-specific values are scrubbed — set them in the environment or edit
+# the defaults below.
+
+CLUSTER=${CLUSTER:-your-cluster}
+SERVICE_NAME=${SERVICE_NAME:-your-service}
+ENV=${ENV:-dev}
+
+saml2aws login -a "$ENV"
+
+TASK_ID=$(saml2aws exec -a "$ENV" -- aws ecs list-tasks \
+  --cluster "$CLUSTER" --service-name "$SERVICE_NAME" |
+  jq -r '.taskArns[0] | split("/") | last')
+
+saml2aws exec -a "$ENV" -- aws ecs execute-command \
+  --cluster "$CLUSTER" \
+  --task "$TASK_ID" \
+  --container "$SERVICE_NAME" \
+  --command "/bin/bash" \
+  --interactive
