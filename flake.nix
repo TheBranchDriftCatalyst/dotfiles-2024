@@ -79,6 +79,9 @@
         import nixpkgs {
           inherit system;
           config.allowUnfree = true;
+          # home/vscode.nix is shared, so the marketplace overlay is needed
+          # here too (darwin hosts wire it via nixpkgs.overlays instead)
+          overlays = [ nix-vscode-extensions.overlays.default ];
         };
     in
     {
@@ -94,6 +97,9 @@
           mac-app-util.darwinModules.default
           home-manager.darwinModules.home-manager
           {
+            # Add vscode-extensions overlay so home-manager can use it
+            nixpkgs.overlays = [ nix-vscode-extensions.overlays.default ];
+
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
