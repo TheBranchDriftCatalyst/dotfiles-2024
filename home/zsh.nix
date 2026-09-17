@@ -477,6 +477,35 @@ in
         fi
         rm -f "$tmp" "$tmp.err"
       }
+
+      # use_onepassword_file <op://vault/item/field> <dest> — materialize a
+      # FILE secret that `op inject` cannot render: 1Password Connect
+      # credentials, a keypair, a kubeconfig. The env-var half of the pattern
+      # is use_onepassword above; this is the file half.
+      #
+      # Cached by design: an existing $dest is left alone, so entering the
+      # repo costs nothing after the first time. Delete the file to re-fetch.
+      # Same soft-fail contract as use_onepassword — a missing/locked op
+      # warns, it never breaks the shell.
+      use_onepassword_file() {
+        local ref="''${1:?use_onepassword_file: op:// ref required}"
+        local dest="''${2:?use_onepassword_file: dest path required}"
+        [[ -f "$dest" ]] && return 0
+        if ! has op; then
+          log_error "use_onepassword_file: op CLI not on PATH — $dest NOT materialized"
+          return 0
+        fi
+        mkdir -p "$(dirname "$dest")"
+        # op read writes the field verbatim; --out-file keeps the bytes off
+        # stdout so a binary/JSON credential is never echoed into the log.
+        if op read "$ref" --out-file "$dest" >/dev/null 2>&1; then
+          chmod 600 "$dest"
+          log_status "1password: materialized $dest"
+        else
+          rm -f "$dest"
+          log_error "use_onepassword_file: op read failed for $ref — $dest NOT materialized"
+        fi
+      }
     '';
   };
 
