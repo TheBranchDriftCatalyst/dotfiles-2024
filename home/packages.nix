@@ -51,6 +51,7 @@
     kubectx
     kubernetes-helm
     kustomize
+    k3d # local dev-cluster: dev-cluster/scripts/setup.sh spawns teak-dev with it
     k9s
     stern
     kubetail

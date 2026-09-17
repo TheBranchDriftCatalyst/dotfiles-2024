@@ -14,7 +14,7 @@ defaults:
   repo: protecht-platform
   base: develop
 paths:
-  worktree: '{homebase}/{org}/worktrees/{repo}/{key}'
+  worktree: '{homebase}/{org}/worktrees/{workspace}/{repo}/{key}'
   ticket: '{homebase}/{org}/tickets/{key}'
   archive: '{homebase}/{org}/tickets/archive/{sprint}/{key}'
   bare: '{homebase}/{org}/.cache/{repo}.git'
@@ -59,7 +59,7 @@ orgs:
         default_base: master
       client-dashboard:
         url: git@github.com:TicketGuardian/Client-Dashboard.git
-        default_base: main
+        default_base: develop
       developer-tools:
         url: git@github.com:TicketGuardian/developer-tools.git
         default_base: main
