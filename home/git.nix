@@ -13,6 +13,7 @@
 
 let
   g = config.catalyst.git;
+  p = config.catalyst.palette;
 in
 
 {
@@ -50,6 +51,22 @@ in
       pull.rebase = true;
       fetch.prune = true;
       diff.colorMoved = "default";
+      # status coloring: the terminal foreground is livery green now, so
+      # git's default staged-green vanishes into body text. Every slot here
+      # is deliberately NOT green; the yellows/red are the ghostty ANSI
+      # values so status speaks the same dialect as the rest of the term.
+      color.status = {
+        header = "#8f8f8f"; # the parenthetical hints recede
+        added = "${p.accent} bold"; # staged — cyan counterpoint
+        changed = "#e7dc60 bold"; # modified, unstaged
+        untracked = "#f57f00"; # orange: new and unclaimed
+        branch = "${p.glow} bold";
+        unmerged = "#f82a5d bold"; # conflicts scream
+      };
+      color.branch = {
+        current = "${p.glow} bold";
+        remote = "${p.accent}";
+      };
       merge.conflictStyle = "zdiff3";
       rerere.enabled = true;
       help.autocorrect = 1;
