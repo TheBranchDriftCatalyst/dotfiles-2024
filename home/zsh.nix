@@ -449,6 +449,19 @@ in
       # use_onepassword [template] — render op:// refs into exported env.
       # Degrades to a warning (never a broken shell) when op is missing,
       # signed out, or the template is absent.
+      #
+      # CACHED. Every new shell re-runs .envrc, and an uncached `op inject` is
+      # a biometric prompt each time — unusable in practice. The rendered env
+      # is kept at .direnv/op-env.cache (0600, gitignored) and reused until
+      # the template changes or the TTL lapses.
+      #
+      # This is a deliberate reversal of the earlier "secrets touch disk only
+      # for milliseconds" stance: the values now persist, 0600, inside the
+      # repo's .direnv/. That is the same exposure .env.local already carries,
+      # and .direnv/ is gitignored, so the trade buys a usable prompt-free
+      # shell. Tune with OP_ENV_CACHE_TTL_MINUTES (default 480 = 8h); set it
+      # to 0 to disable caching. Bust it by hand with:
+      #   rm .direnv/op-env.cache
       use_onepassword() {
         local tpl="''${1:-.env.tpl}"
         if [[ ! -f "$tpl" ]]; then
@@ -456,22 +469,47 @@ in
           return 0
         fi
         watch_file "$tpl"
+
+        local cache="''${DIRENV_LAYOUT_DIR:-$PWD/.direnv}/op-env.cache"
+        local ttl="''${OP_ENV_CACHE_TTL_MINUTES:-480}"
+        local n
+
+        # Fresh cache: newer than the template AND inside the TTL.
+        # -mmin is supported by both GNU and BSD find, unlike -newermt.
+        if [[ "$ttl" != 0 && -f "$cache" && "$cache" -nt "$tpl" ]] &&
+          [[ -z "$(find "$cache" -mmin +"$ttl" 2>/dev/null)" ]]; then
+          eval "$("''${direnv:-direnv}" dotenv bash "$cache")"
+          n="$(grep -c '^[A-Za-z_][A-Za-z0-9_]*=' "$cache")"
+          log_status "1password: loaded $n secret(s) from cache (no prompt)"
+          return 0
+        fi
+
         if ! has op; then
           log_error "use_onepassword: op CLI not on PATH — secrets NOT loaded"
           return 0
         fi
+
         # render to a real temp file: dotenv <(…) loses the fd before
-        # direnv's binary opens it and silently loads nothing (mktemp is
-        # 0600; secrets touch disk only for the ms between render and rm)
+        # direnv's binary opens it and silently loads nothing (mktemp is 0600)
         local tmp
         tmp="$(mktemp -t op-env.XXXXXXXX)"
         # >/dev/null: op prints the -o path to stdout. And do NOT use the
         # stdlib dotenv() here — it watch_files its input; watching a
-        # deleted temp file makes direnv reload on EVERY prompt. The
-        # template (watched above) is the only correct reload trigger.
+        # deleted/rewritten cache file makes direnv reload on EVERY prompt.
+        # The template (watched above) is the only correct reload trigger.
         if op inject -f -i "$tpl" -o "$tmp" >/dev/null 2>"$tmp.err"; then
-          eval "$("''${direnv:-direnv}" dotenv bash "$tmp")"
-          log_status "1password: loaded $(grep -c '^[A-Za-z_][A-Za-z0-9_]*=' "$tmp") secret(s) from $tpl"
+          mkdir -p "$(dirname "$cache")"
+          install -m 600 "$tmp" "$cache"
+          eval "$("''${direnv:-direnv}" dotenv bash "$cache")"
+          n="$(grep -c '^[A-Za-z_][A-Za-z0-9_]*=' "$cache")"
+          log_status "1password: loaded $n secret(s) from $tpl"
+        elif [[ -f "$cache" ]]; then
+          # op unavailable/locked but we have a previous render — a stale
+          # cache beats an empty environment. Loud, because the values may
+          # predate a rotation.
+          eval "$("''${direnv:-direnv}" dotenv bash "$cache")"
+          n="$(grep -c '^[A-Za-z_][A-Za-z0-9_]*=' "$cache")"
+          log_error "use_onepassword: op inject failed: $(head -1 "$tmp.err" 2>/dev/null) — using STALE cache ($n secret(s))"
         else
           log_error "use_onepassword: op inject failed: $(head -1 "$tmp.err" 2>/dev/null) — secrets NOT loaded"
         fi
