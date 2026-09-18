@@ -6,7 +6,11 @@
 #
 # Without this rule the third manager drifts into the same overlap that
 # afx/brew had.
-# TODO: mise is probably gone, moving over to nix entirely at the repo level using flake + direnv
+# SCOPE: imported ONLY by hosts/teakbookM5DJ/home.nix, not by home/default.nix.
+# Work repos pin runtimes with .nvmrc / .python-version and can't be asked to
+# adopt nix, so the work machine keeps mise as the bridge. Personal machines
+# stay nix-only. Adding this to home/default.nix would put mise back on every
+# host — scope it per-host instead.
 _:
 
 {
