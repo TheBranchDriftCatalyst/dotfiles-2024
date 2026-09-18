@@ -1,24 +1,24 @@
 -- load defaults i.e lua_lsp
 require("nvchad.configs.lspconfig").defaults()
 
-local lspconfig = require "lspconfig"
-
--- EXAMPLE
+-- nvim 0.11+ native LSP API. nvim-lspconfig stays installed purely as the
+-- data source (its lsp/*.lua server definitions land on runtimepath);
+-- require("lspconfig") itself is the deprecated framework — don't.
 local servers = { "html", "cssls" }
 local nvlsp = require "nvchad.configs.lspconfig"
 
--- lsps with default config
 for _, lsp in ipairs(servers) do
-  lspconfig[lsp].setup {
+  vim.lsp.config(lsp, {
     on_attach = nvlsp.on_attach,
     on_init = nvlsp.on_init,
     capabilities = nvlsp.capabilities,
-  }
+  })
 end
+vim.lsp.enable(servers)
 
--- configuring single server, example: typescript
--- lspconfig.tsserver.setup {
+-- single server with extra settings, example:
+-- vim.lsp.config("ts_ls", {
 --   on_attach = nvlsp.on_attach,
---   on_init = nvlsp.on_init,
---   capabilities = nvlsp.capabilities,
--- }
+--   settings = { ... },
+-- })
+-- vim.lsp.enable { "ts_ls" }
