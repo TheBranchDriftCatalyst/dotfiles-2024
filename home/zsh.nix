@@ -17,6 +17,137 @@
   ...
 }:
 
+let
+  p = config.catalyst.palette;
+  # vivid wants bare hex; palette carries #RRGGBB
+  hex = c: builtins.substring 1 6 c;
+
+  # LS_COLORS as livery: file listings read the machine's palette, same as
+  # bat/starship/delta/lazygit. Non-palette constants are the ghostty ANSI
+  # dialect — the same values git's color.status speaks (git.nix), so every
+  # colored surface in the terminal uses one vocabulary.
+  # Semantics: directories = glow (identity), executables = accent
+  # counterpoint, config/todo = yellow, archives/office = orange, media +
+  # markup = purple, danger = red, noise = grey.
+  liveryVividTheme = pkgs.writeText "vivid-livery.yml" ''
+    colors:
+      deep: "${hex p.deep}"
+      mid: "${hex p.mid}"
+      glow: "${hex p.glow}"
+      sunBot: "${hex p.sunBot}"
+      accent: "${hex p.accent}"
+      yellow: "e7dc60"
+      orange: "f57f00"
+      red: "f82a5d"
+      purple: "a57fff"
+      grey: "8f8f8f"
+
+    core:
+      normal_text: {}
+      regular_file: {}
+      reset_to_normal: {}
+      directory:
+        foreground: glow
+        font-style: bold
+      symlink:
+        foreground: accent
+        font-style: italic
+      multi_hard_link: {}
+      fifo:
+        foreground: purple
+        background: mid
+      socket:
+        foreground: purple
+        background: mid
+        font-style: bold
+      door:
+        foreground: purple
+        background: mid
+        font-style: bold
+      block_device:
+        foreground: yellow
+        background: mid
+        font-style: bold
+      character_device:
+        foreground: yellow
+        background: mid
+        font-style: bold
+      broken_symlink:
+        foreground: red
+        font-style: bold
+      missing_symlink_target:
+        foreground: red
+      setuid:
+        foreground: deep
+        background: red
+      setgid:
+        foreground: deep
+        background: yellow
+      file_with_capability: {}
+      sticky_other_writable:
+        foreground: deep
+        background: glow
+      other_writable:
+        foreground: glow
+        font-style: underline
+      sticky:
+        foreground: deep
+        background: purple
+      executable_file:
+        foreground: accent
+        font-style: bold
+
+    text:
+      special:
+        foreground: orange
+      todo:
+        foreground: yellow
+        font-style: bold
+      licenses:
+        foreground: grey
+      configuration:
+        foreground: yellow
+      other: {}
+
+    markup:
+      foreground: purple
+
+    # a group needs a real style to cover its subtree ({} does not propagate);
+    # sunBot keeps source files in the green family, one shade off body text
+    programming:
+      foreground: sunBot
+
+    media:
+      image:
+        foreground: purple
+      audio:
+        foreground: accent
+      video:
+        foreground: purple
+        font-style: bold
+      fonts:
+        foreground: grey
+      3d:
+        foreground: purple
+
+    office:
+      foreground: orange
+
+    archives:
+      foreground: orange
+      font-style: bold
+
+    executable:
+      foreground: accent
+      font-style: bold
+
+    unimportant:
+      foreground: grey
+  '';
+  liveryLsColors = pkgs.runCommand "ls-colors-livery" { } ''
+    ${pkgs.vivid}/bin/vivid generate ${liveryVividTheme} > $out
+  '';
+in
 {
   # Payload configs the old dotbot base profile linked; static one-shot
   # provisioning, so settings live as Nix data and YAML renders at build time.
@@ -216,14 +347,12 @@
         source ${./zsh/functions.zsh}
         source ${./zsh/fzf-git.zsh}
 
-        # LS_COLORS is rendered at BUILD time by vivid (neon-cyberpunk theme,
-        # matches the livery) — replaces the 2012 .dir_colors relic and its
-        # per-shell dircolors eval. Exported BEFORE init.zsh, whose list-colors
-        # zstyle reads it (that zstyle was a silent no-op for years — nothing
-        # set LS_COLORS). Livery followup: generate the theme from the palette.
-        export LS_COLORS="$(<${
-          pkgs.runCommand "ls-colors-cyberdream" { } "${pkgs.vivid}/bin/vivid generate cyberdream > $out"
-        })"
+        # LS_COLORS is rendered at BUILD time by vivid from the LIVERY theme
+        # (generated from catalyst.palette in the let-block above) — replaces
+        # the 2012 .dir_colors relic and its per-shell dircolors eval.
+        # Exported BEFORE init.zsh, whose list-colors zstyle reads it (that
+        # zstyle was a silent no-op for years — nothing set LS_COLORS).
+        export LS_COLORS="$(<${liveryLsColors})"
 
         # ── ACTIVE runtime settings: setopts, zstyles, keybindings, core
         # aliases — pure zsh, so it lives as a real file (IDE-highlighted).
