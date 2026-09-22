@@ -110,6 +110,11 @@ in
   programs.gh = {
     enable = true;
     settings.git_protocol = "ssh";
-    extensions = with pkgs; [ gh-dash ];
+    extensions = with pkgs; [
+      gh-dash
+      gh-stack # official stacked-PR extension — the extensions dir is a
+      # store symlink, so `gh extension install` can never work; this list
+      # is the only lane
+    ];
   };
 }
