@@ -165,6 +165,11 @@
       "spotify"
       "wakatime"
       "p-arr" # own app (pr-widget): floating GitHub PR dashboard — via the tap above
+      # MOVED from masApps: mas 7 sudo-installs + a Tahoe receipt bug made
+      # every switch fail on it; Flexibits ships this direct build (cask =
+      # auto_updates, brew never touches it again). MAS lane is for
+      # cask-less apps only — per the masApps note below.
+      "fantastical"
 
       # Kernel/system extensions — these can NEVER be Nix packages.
       "little-snitch"
@@ -173,7 +178,6 @@
     ];
 
     masApps = {
-      Fantastical = 975937182;
       Yoink = 457622435;
       # no cask exists and it's not in nixpkgs — MAS is the only managed lane
       PDFgear = 6469021132;
