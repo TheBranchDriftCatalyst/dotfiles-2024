@@ -134,6 +134,9 @@
       upgrade = true;
     };
 
+    # own tap: P-Arr (pr-widget) ships through TheBranchDriftCatalyst/catalyst
+    taps = [ "thebranchdriftcatalyst/catalyst" ];
+
     # mas: the CLI `brew bundle` shells out to for masApps below. Pinned
     # explicitly rather than trusting bundle's on-demand install of it.
     brews = [ "mas" ];
@@ -161,6 +164,7 @@
       "notion"
       "spotify"
       "wakatime"
+      "p-arr" # own app (pr-widget): floating GitHub PR dashboard — via the tap above
 
       # Kernel/system extensions — these can NEVER be Nix packages.
       "little-snitch"
