@@ -119,6 +119,14 @@ test:
     docker build -f test/Dockerfile -t {{image}} .
     docker run --rm -v catalyst-nix-store:/nix {{image}} ./test/run.sh
 
+# The sketchybar popup state machine, with `sbar` stubbed — no bar process, no
+# macOS, sub-second. Section 2 is a regression test for the mach IPC DEADLOCK
+# that froze the bar several times a day: it fails if the sbar.delay guard in
+# widgets.lua is ever "simplified" away (full writeup in harness.lua).
+# Seconds, no container — the gate for anything under darwin/sketchybar/.
+test-sketchybar:
+    ./test/sketchybar/run.sh
+
 # Interactive shell in the test container, for poking at failures.
 test-shell:
     docker build -f test/Dockerfile -t {{image}} .

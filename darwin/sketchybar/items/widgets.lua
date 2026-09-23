@@ -26,11 +26,52 @@ local settings = require("settings")
 -- that is exactly how they used to stack.
 local current = nil
 
+-- The walk-off-the-bar dismissal below is GLOBAL logic — it reads `current`,
+-- not any one widget's state — so it only needs ONE subscriber. Registering it
+-- per widget meant sketchybar made six blocking IPC round-trips on every
+-- single bar exit instead of one. First click_popup call claims it.
+local dismiss_registered = false
+
+-- EVERY mouse.* callback is delivered synchronously from sketchybar's event
+-- dispatch, and sketchybar sends those events with a blocking, untimed
+-- mach_send_message (bar_item.c: bar_item_update -> mach_send_message, and
+-- bar_item_mouse_entered / _exited / on_click all route through it). SbarLua
+-- in turn sends every sbar command back with a blocking, untimed send of its
+-- own. So if a callback issues an sbar command while sketchybar is still
+-- inside the dispatch, the two processes can end up sending to each other
+-- with neither draining, and both park in mach_msg2_trap forever at 0% CPU.
+-- Wrapping a handler in deferred() moves its body onto a later runloop pass:
+-- sbar.delay does no IPC itself, it only arms a CFRunLoopTimer.
+-- This is not a nicety. It is the fix for the freeze; see test-sketchybar.
+-- `guard` is optional and runs SYNCHRONOUSLY inside the callback. It must read
+-- plain Lua state only, never sbar — that is what keeps it safe here. Returning
+-- false skips arming the timer at all, which matters more than it looks:
+-- SbarLua luaL_ref's every delay callback (sketchybar.c:791) and contains no
+-- luaL_unref anywhere, so each armed timer is a PERMANENT Lua registry entry.
+-- Unguarded, sweeping the mouse across an open 12-row deck would pin two dozen
+-- dead closures forever. Guarding ties that cost to interactions that do work.
+local function deferred(fn, guard)
+  return function(...)
+    if guard and not guard() then
+      return
+    end
+    local a = table.pack(...)
+    sbar.delay(0.01, function()
+      fn(table.unpack(a, 1, a.n))
+    end)
+  end
+end
+
 -- extras: additional bar items (e.g. the mem bar's segments) that act as
 -- click surfaces for the same popup
-local function click_popup(item, extras)
+-- panel: the deck or popup_rows whose contents live under this item's popup.
+-- It is told when it becomes visible, so it can skip rendering while hidden.
+local function click_popup(item, extras, panel)
   local function close()
     item:set({ popup = { drawing = false } })
+    if panel then
+      panel.on_close()
+    end
   end
   local function toggle()
     local mine = current ~= nil and current.item == item
@@ -42,19 +83,36 @@ local function click_popup(item, extras)
     if not mine then
       item:set({ popup = { drawing = true } })
       current = { item = item, close = close }
+      if panel then
+        panel.on_open()
+      end
     end
   end
   for _, it in ipairs({ item, table.unpack(extras or {}) }) do
-    it:subscribe("mouse.clicked", toggle)
+    it:subscribe("mouse.clicked", deferred(toggle))
   end
   -- safety net: walking off the bar entirely always dismisses. Without this a
   -- popup could outlive every path that would otherwise close it.
-  item:subscribe("mouse.exited.global", function()
-    if current ~= nil and current.item == item then
-      close()
-      current = nil
-    end
-  end)
+  --
+  -- This is the handler that was caught deadlocked in the wild (both processes
+  -- parked in mach_msg2_trap at 0% CPU, stacks sampled 2026-09-22) — it is the
+  -- worst of the bunch because bar_manager_handle_mouse_exited_global fans one
+  -- blocking send out to EVERY subscriber, which is why there is now exactly
+  -- one. The deferred() wrapper is what makes it safe; see its note above.
+  if not dismiss_registered then
+    dismiss_registered = true
+    item:subscribe(
+      "mouse.exited.global",
+      deferred(function()
+        if current ~= nil then
+          current.close()
+          current = nil
+        end
+      end, function()
+        return current ~= nil
+      end)
+    )
+  end
 end
 
 -- fixed pool of n reusable rows under popup.<owner>; returns fill(lines)
@@ -72,7 +130,9 @@ local function popup_rows(owner, n, width)
       width = width,
     })
   end
-  return function(lines)
+  local is_open, pending = false, nil
+
+  local function render(lines)
     for i = 1, n do
       if lines[i] then
         rows[i]:set({ drawing = true, label = { string = lines[i] } })
@@ -81,6 +141,33 @@ local function popup_rows(owner, n, width)
       end
     end
   end
+
+  -- Callable, so the existing `clock_fill({ ... })` call sites are unchanged,
+  -- but carrying on_open/on_close so click_popup can gate it. Filling a popup
+  -- nobody is looking at costs n blocking mach round-trips per routine tick
+  -- and shows no one anything; the data is kept and rendered on open instead,
+  -- which is what "warm data instantly" always meant.
+  local panel = {
+    on_open = function()
+      is_open = true
+      if pending then
+        render(pending)
+        pending = nil
+      end
+    end,
+    on_close = function()
+      is_open = false
+    end,
+  }
+  return setmetatable(panel, {
+    __call = function(_, lines)
+      if not is_open then
+        pending = lines
+        return
+      end
+      render(lines)
+    end,
+  })
 end
 
 local function lines_of(s)
@@ -199,27 +286,34 @@ local function deck(owner, n, width, spec)
     })
     rows[i] = row
 
-    row:subscribe("mouse.entered", function()
-      if entries[i] and entries[i].payload and open ~= i then
+    row:subscribe(
+      "mouse.entered",
+      deferred(function()
         row:set({ background = { color = colors.hover } })
-      end
-    end)
-    row:subscribe("mouse.exited", function()
-      if open ~= i then
+      end, function()
+        return entries[i] and entries[i].payload and open ~= i
+      end)
+    )
+    row:subscribe(
+      "mouse.exited",
+      deferred(function()
         row:set({ background = { color = colors.transparent } })
-      end
-    end)
-    row:subscribe("mouse.clicked", function()
-      local e = entries[i]
-      if not e or not e.payload then
-        return
-      end
-      if open == i then
-        collapse()
-      else
-        expand(i)
-      end
-    end)
+      end, function()
+        return open ~= i
+      end)
+    )
+    row:subscribe(
+      "mouse.clicked",
+      deferred(function()
+        if open == i then
+          collapse()
+        else
+          expand(i)
+        end
+      end, function()
+        return entries[i] and entries[i].payload
+      end)
+    )
 
     verb_items[i] = {}
     for j = 1, spec.max do
@@ -242,44 +336,55 @@ local function deck(owner, n, width, spec)
       })
       verb_items[i][j] = v
 
-      v:subscribe("mouse.entered", function()
-        if verbs[i] and verbs[i][j] and confirming ~= i * 100 + j then
+      v:subscribe(
+        "mouse.entered",
+        deferred(function()
           v:set({ background = { color = colors.hover } })
-        end
-      end)
-      v:subscribe("mouse.exited", function()
-        if confirming ~= i * 100 + j then
+        end, function()
+          return verbs[i] and verbs[i][j] and confirming ~= i * 100 + j
+        end)
+      )
+      v:subscribe(
+        "mouse.exited",
+        deferred(function()
           restyle_verb(i, j)
-        end
-      end)
-      v:subscribe("mouse.clicked", function()
-        local verb = verbs[i] and verbs[i][j]
-        if not verb then
-          return
-        end
-        if verb.confirm and confirming ~= i * 100 + j then
-          gen = gen + 1
-          local my_gen = gen
-          confirming = i * 100 + j
-          v:set({
-            icon = { string = "󰐥", color = colors.deep },
-            label = { string = verb.confirm, color = colors.deep },
-            background = { color = colors.hot },
-          })
-          sbar.delay(4, function()
-            if confirming == i * 100 + j and gen == my_gen then
-              confirming = nil
-              restyle_verb(i, j)
-            end
-          end)
-          return
-        end
-        fire(verb.cmd)
-      end)
+        end, function()
+          return verbs[i] and verbs[i][j] and confirming ~= i * 100 + j
+        end)
+      )
+      v:subscribe(
+        "mouse.clicked",
+        deferred(function()
+          local verb = verbs[i] and verbs[i][j]
+          if not verb then
+            return
+          end
+          if verb.confirm and confirming ~= i * 100 + j then
+            gen = gen + 1
+            local my_gen = gen
+            confirming = i * 100 + j
+            v:set({
+              icon = { string = "󰐥", color = colors.deep },
+              label = { string = verb.confirm, color = colors.deep },
+              background = { color = colors.hot },
+            })
+            sbar.delay(4, function()
+              if confirming == i * 100 + j and gen == my_gen then
+                confirming = nil
+                restyle_verb(i, j)
+              end
+            end)
+            return
+          end
+          fire(verb.cmd)
+        end)
+      )
     end
   end
 
-  d.fill = function(title, list)
+  local is_open, pending = false, nil
+
+  local function render(title, list)
     collapse()
     head:set({ label = { string = title } })
     for i = 1, n do
@@ -296,6 +401,32 @@ local function deck(owner, n, width, spec)
         rows[i]:set({ drawing = false })
       end
     end
+  end
+
+  -- Same bargain as popup_rows: a closed deck costs n+1 blocking round-trips
+  -- per tick for pixels nobody sees. mem alone is 13 of them every 10s. Hold
+  -- the newest data and render it the moment the popup opens.
+  d.fill = function(title, list)
+    if not is_open then
+      pending = { title = title, list = list }
+      return
+    end
+    render(title, list)
+  end
+
+  d.on_open = function()
+    is_open = true
+    if pending then
+      render(pending.title, pending.list)
+      pending = nil
+    elseif d.refresh then
+      -- opened before the first routine tick ever landed: fetch now
+      d.refresh()
+    end
+  end
+
+  d.on_close = function()
+    is_open = false
   end
 
   return d
@@ -315,7 +446,7 @@ clock:subscribe({ "routine", "forced", "system_woke" }, function()
     clock_fill({ table.unpack(lns, 2) })
   end)
 end)
-click_popup(clock)
+click_popup(clock, nil, clock_fill)
 
 -- ── battery ───────────────────────────────────────────────────────────────
 local battery = sbar.add("item", "battery", {
@@ -355,7 +486,7 @@ battery:subscribe({ "routine", "forced", "power_source_change", "system_woke" },
     end
   )
 end)
-click_popup(battery)
+click_popup(battery, nil, battery_fill)
 
 -- ── cpu: top-process deck ─────────────────────────────────────────────────
 -- verbs shared by every process row (cpu hogs, mem hogs): quit asks nicely,
@@ -407,7 +538,7 @@ local function cpu_refresh()
 end
 cpu_deck.refresh = cpu_refresh
 cpu:subscribe({ "routine", "forced" }, cpu_refresh)
-click_popup(cpu)
+click_popup(cpu, nil, cpu_deck)
 
 -- ── memory: stacked composition bar, deets in the popup ───────────────────
 -- Activity Monitor's taxonomy, derived from vm_stat pages:
@@ -561,7 +692,7 @@ local seg_items = {}
 for _, s in ipairs(segments) do
   seg_items[#seg_items + 1] = s.item
 end
-click_popup(mem, seg_items)
+click_popup(mem, seg_items, mem_deck)
 
 -- ── docker: container deck (colima) ────────────────────────────────────────
 -- click a row to pause/unpause, right-click twice to kill
@@ -628,7 +759,7 @@ local function docker_refresh()
 end
 docker_deck.refresh = docker_refresh
 docker:subscribe({ "routine", "forced", "system_woke" }, docker_refresh)
-click_popup(docker)
+click_popup(docker, nil, docker_deck)
 
 -- ── k8s: deployment deck ───────────────────────────────────────────────────
 -- click a row to scale a deployment to zero (previous replica count is
@@ -754,4 +885,4 @@ local function k8s_refresh()
 end
 k8s_deck.refresh = k8s_refresh
 k8s:subscribe({ "routine", "forced", "system_woke" }, k8s_refresh)
-click_popup(k8s)
+click_popup(k8s, nil, k8s_deck)
