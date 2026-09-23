@@ -1,3 +1,45 @@
+# What `just test` is allowed to send to the Docker daemon.
+#
+# NOTE this is NOT .gitignore — Docker does not read that file. Several paths
+# below are already git-ignored and were still being baked into the image by
+# `COPY . ${DOTFILES}` (test/Dockerfile), including real credentials:
+#   .scratch/dotfiles/.kube/config
+#   .scratch/dotfiles/.config/k3d/kubeconfig-catalyst-dev.yaml
+#   .scratch/dotfiles/.config/op/config
+#   .scratch/dotfiles/.config/argocd/config
+# Those files stay on disk — they are simply never copied into a layer.
+#
+# Keep this a DENYLIST: the container genuinely needs most of the repo
+# (flake.nix + flake.lock, home/, darwin/, hosts/, dotfiles/, test/), and an
+# allowlist would silently starve the build the next time a module is added.
+
+# ── vcs / build output ───────────────────────────────────────────────────────
 .git
+.jj
 result
 result-*
+*.hm-bak
+
+# ── credentials and machine-local state ──────────────────────────────────────
+# 278M pre-nix backup; carries kube/op/argocd configs. Kept on disk, never sent.
+.scratch/
+# rendered secret caches (op env), per-directory
+.direnv/
+**/.direnv/
+# machine-local catalyst config: jira tenant, work email, private repo URLs
+dotfiles/catalyst/config.yaml
+# issue tracker db + credential key
+.beads/
+.claude/
+.codex/
+
+# ── bulk that has no business in the image ───────────────────────────────────
+# 116M of node_modules/.venv build output from the demo flake
+example/
+node_modules/
+**/node_modules/
+.venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+.pytest_cache/
