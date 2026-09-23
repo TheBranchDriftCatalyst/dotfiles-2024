@@ -82,6 +82,25 @@ check "setopts applied" zsh -i -c '[[ -o autopushd ]]'
 check "spellcheck retired" zsh -i -c '[[ ! -o correctall ]]'
 check "starship is the prompt" zsh -i -c 'typeset -f prompt_starship_precmd >/dev/null'
 
+echo "══ 8. direnv helper library (home/direnv/lib) ══"
+LIBDIR="${XDG_CONFIG_HOME:-$HOME/.config}/direnv/lib"
+check "onepassword.sh installed" test -e "$LIBDIR/onepassword.sh"
+check "nix-direnv still installed alongside it" test -e "$LIBDIR/hm-nix-direnv.sh"
+# The suite is bash (arrays, [[ ]]); this image ships busybox sh. Run it when a
+# bash exists, and SAY SO when it does not — a silent skip reads as a pass.
+if command -v bash >/dev/null 2>&1; then
+  # Not run_step: that aborts the whole file, and a direnv failure should not
+  # cost us the summary for everything after it.
+  if bash ./test/direnv/run.sh "$LIBDIR/onepassword.sh" >"$LOG" 2>&1; then
+    ok "direnv/op suite (against the INSTALLED lib)"
+  else
+    tail -40 "$LOG"
+    bad "direnv/op suite (against the INSTALLED lib)"
+  fi
+else
+  printf '  \033[0;33m—\033[0m %s\n' 'direnv/op suite SKIPPED: no bash in this image (run `just test-direnv` on the host)'
+fi
+
 echo
 if [ "$fails" -eq 0 ]; then
   printf '\033[0;32m══ ALL TESTS PASSED ══\033[0m\n'

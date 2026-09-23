@@ -103,7 +103,9 @@ longer casks.
 
 The dev-secrets layer is declarative — `op` CLI from `home/packages.nix`
 (nixpkgs `_1password-cli`, cross-platform) and the `use_onepassword` direnv
-function from `home/zsh.nix`. Only authentication is manual, once per machine:
+function from `home/direnv/lib/onepassword.sh`, installed into
+`~/.config/direnv/lib/` by `home/direnv.nix` and covered by
+`just test-direnv`. Only authentication is manual, once per machine:
 
 **macOS**
 
@@ -126,7 +128,11 @@ function from `home/zsh.nix`. Only authentication is manual, once per machine:
 
 Repos consume secrets by committing an `.env.tpl` of `op://` references and
 calling `use_onepassword` from `.envrc` — entering the repo materializes them
-as env vars (ESO-for-dev; naming: `op://dev/<repo-name>/<kebab-field>`).
+as env vars (ESO-for-dev; naming: `op://dev/<repo-name>/<kebab-field>`). The
+render is cached in `.direnv/op-env.cache` (0600, gitignored) so only the
+first shell per repo costs a biometric prompt; `OP_ENV_CACHE_TTL_MINUTES`
+tunes the 8h default, and `use_onepassword_file` is the same pattern for a
+whole-file secret (a Connect credential, a keypair, a kubeconfig).
 
 ## Status
 

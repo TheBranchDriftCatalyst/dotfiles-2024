@@ -73,7 +73,7 @@
     sops
     age
     mkcert
-    _1password-cli # `op` — repos consume vault secrets via use_onepassword (zsh.nix direnv stdlib)
+    _1password-cli # `op` — repos consume vault secrets via use_onepassword (home/direnv/lib)
 
     # ── net & inspection ─────────────────────────────────────────────────
     curl

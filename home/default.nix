@@ -11,6 +11,7 @@
     ./contexts.nix
     ./packages.nix
     ./zsh.nix
+    ./direnv.nix
     ./git.nix
     ./tmux.nix
     ./starship.nix

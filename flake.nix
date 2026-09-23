@@ -95,11 +95,14 @@
     {
       # ── macOS ──────────────────────────────────────────────────────────────
       # Named by real hostname, so `darwin-rebuild switch --flake .` picks the
-      # matching config with no #target. A new Mac gets its own hosts/<name>/.
+      # matching config with no #target. A new Mac gets its own hosts/<name>/ —
+      # hostname, user, palette, brew bundles — while ./darwin carries every
+      # shared system default (the darwin-layer mirror of ./home).
       darwinConfigurations."teakbookM5DJ" = nix-darwin.lib.darwinSystem {
         system = "aarch64-darwin";
         specialArgs = mkArgs "aarch64-darwin";
         modules = [
+          ./darwin
           ./hosts/teakbookM5DJ
           sops-nix.darwinModules.sops
           mac-app-util.darwinModules.default
@@ -130,6 +133,7 @@
         system = "aarch64-darwin";
         specialArgs = mkArgs "aarch64-darwin";
         modules = [
+          ./darwin
           ./hosts/catalystM5
           sops-nix.darwinModules.sops
           mac-app-util.darwinModules.default

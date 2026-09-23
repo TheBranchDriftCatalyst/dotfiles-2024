@@ -4,12 +4,15 @@ local settings = require("settings")
 -- right-side items stack right-to-left in add order, so this file reads
 -- from the right edge inward: clock, battery, cpu, memory, docker, k8s.
 --
--- Every widget gets a hover/click popup. Popup contents are refreshed in
+-- Every widget gets a click popup. Popup contents are refreshed in
 -- each widget's routine callback (the data is being fetched anyway), so
--- hovering shows warm data instantly instead of waiting on an exec.
+-- opening one shows warm data instantly instead of waiting on an exec.
 --
--- Interaction model: hover = glance (popup follows the cursor, read-only),
--- click = pin (popup stays open so its rows can be clicked). docker/k8s/
+-- Interaction model: click = open, click again = close, and at most ONE is
+-- open at a time. Hover used to open them too, which is what made them pile
+-- up: hovering across the bar opened each widget it passed while any pinned
+-- one stayed put, so several overlapped and each needed its own dismissal.
+-- Hover now only highlights rows inside an already-open popup. docker/k8s/
 -- cpu/mem popups are "decks": clicking a row unfolds verb buttons beneath it
 -- (sketchybar popups are strictly one item per line — one click target each —
 -- so side-by-side buttons on a row aren't possible; the unfolding submenu is
@@ -17,32 +20,40 @@ local settings = require("settings")
 -- and names its target, a second click fires, 4s to change your mind.
 
 -- ── popup helpers ──────────────────────────────────────────────────────────
+-- Which popup is currently open, shared by every widget. This lives at module
+-- scope on purpose: each click_popup call closes over only its OWN item, so
+-- six independent flags had no way to know another popup was already up —
+-- that is exactly how they used to stack.
+local current = nil
+
 -- extras: additional bar items (e.g. the mem bar's segments) that act as
--- hover/click surfaces for the same popup, sharing the pin state
-local function hover_popup(item, extras)
-  local pinned = false
-  local function enter()
-    item:set({ popup = { drawing = true } })
+-- click surfaces for the same popup
+local function click_popup(item, extras)
+  local function close()
+    item:set({ popup = { drawing = false } })
   end
-  -- plain exited fires the moment the cursor leaves the bar item (including
-  -- travel down into the popup) — so only the pinned state survives it
-  local function exit()
-    if not pinned then
-      item:set({ popup = { drawing = false } })
+  local function toggle()
+    local mine = current ~= nil and current.item == item
+    if current then
+      current.close()
+      current = nil
+    end
+    -- clicking the open one is a close, not a reopen
+    if not mine then
+      item:set({ popup = { drawing = true } })
+      current = { item = item, close = close }
     end
   end
-  local function toggle_pin()
-    pinned = not pinned
-    item:set({ popup = { drawing = pinned } })
-  end
   for _, it in ipairs({ item, table.unpack(extras or {}) }) do
-    it:subscribe("mouse.entered", enter)
-    it:subscribe("mouse.exited", exit)
-    it:subscribe("mouse.clicked", toggle_pin)
+    it:subscribe("mouse.clicked", toggle)
   end
+  -- safety net: walking off the bar entirely always dismisses. Without this a
+  -- popup could outlive every path that would otherwise close it.
   item:subscribe("mouse.exited.global", function()
-    pinned = false
-    item:set({ popup = { drawing = false } })
+    if current ~= nil and current.item == item then
+      close()
+      current = nil
+    end
   end)
 end
 
@@ -304,7 +315,7 @@ clock:subscribe({ "routine", "forced", "system_woke" }, function()
     clock_fill({ table.unpack(lns, 2) })
   end)
 end)
-hover_popup(clock)
+click_popup(clock)
 
 -- ── battery ───────────────────────────────────────────────────────────────
 local battery = sbar.add("item", "battery", {
@@ -344,7 +355,7 @@ battery:subscribe({ "routine", "forced", "power_source_change", "system_woke" },
     end
   )
 end)
-hover_popup(battery)
+click_popup(battery)
 
 -- ── cpu: top-process deck ─────────────────────────────────────────────────
 -- verbs shared by every process row (cpu hogs, mem hogs): quit asks nicely,
@@ -396,7 +407,7 @@ local function cpu_refresh()
 end
 cpu_deck.refresh = cpu_refresh
 cpu:subscribe({ "routine", "forced" }, cpu_refresh)
-hover_popup(cpu)
+click_popup(cpu)
 
 -- ── memory: stacked composition bar, deets in the popup ───────────────────
 -- Activity Monitor's taxonomy, derived from vm_stat pages:
@@ -550,7 +561,7 @@ local seg_items = {}
 for _, s in ipairs(segments) do
   seg_items[#seg_items + 1] = s.item
 end
-hover_popup(mem, seg_items)
+click_popup(mem, seg_items)
 
 -- ── docker: container deck (colima) ────────────────────────────────────────
 -- click a row to pause/unpause, right-click twice to kill
@@ -617,7 +628,7 @@ local function docker_refresh()
 end
 docker_deck.refresh = docker_refresh
 docker:subscribe({ "routine", "forced", "system_woke" }, docker_refresh)
-hover_popup(docker)
+click_popup(docker)
 
 -- ── k8s: deployment deck ───────────────────────────────────────────────────
 -- click a row to scale a deployment to zero (previous replica count is
@@ -743,4 +754,4 @@ local function k8s_refresh()
 end
 k8s_deck.refresh = k8s_refresh
 k8s:subscribe({ "routine", "forced", "system_woke" }, k8s_refresh)
-hover_popup(k8s)
+click_popup(k8s)

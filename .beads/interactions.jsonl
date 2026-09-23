@@ -1,0 +1,1 @@
+{"id":"int-02f0e5c7505cd691fefd2c4980ed204f","kind":"field_change","created_at":"2026-09-19T16:08:56.881827Z","actor":"DJ Daniels","issue_id":"dotfiles-qsr","extra":{"field":"status","new_value":"closed","old_value":"in_progress","reason":"Extracted to home/direnv/lib/onepassword.sh + home/direnv.nix; hardened; 77-assertion suite in test/direnv/ passing"}}
