@@ -175,6 +175,15 @@ test:
     docker build -f test/Dockerfile -t {{image}} .
     docker run --rm -v catalyst-nix-store:/nix {{image}} ./test/run.sh
 
+# The direnv helper library, end to end: real direnv, stubbed `op` CLI.
+# Seconds, no container — this is the gate for anything under home/direnv/.
+test-direnv:
+    ./test/direnv/run.sh
+
+# Same suite, but against what home-manager actually installed into ~/.config.
+test-direnv-installed:
+    ./test/direnv/run.sh ~/.config/direnv/lib/onepassword.sh
+
 # The sketchybar popup state machine, with `sbar` stubbed — no bar process, no
 # macOS, sub-second. Section 2 is a regression test for the mach IPC DEADLOCK
 # that froze the bar several times a day: it fails if the sbar.delay guard in
