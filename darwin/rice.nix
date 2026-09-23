@@ -83,12 +83,28 @@ in
   };
 
   config = {
-    # the mem deck's "purge now" button: purge(8) is root-only, so grant
-    # exactly that binary passwordless — nothing broader. The user is derived,
-    # not hardcoded: this file is shared and the old copies both said `dj`,
-    # which silently did nothing on the host whose user is `panda`.
+    # Passwordless root for exactly two binaries — nothing broader. The user is
+    # derived, not hardcoded: this file is shared and the old copies both said
+    # `dj`, which silently did nothing on the host whose user is `panda`.
+    #
+    #   purge(8)        the mem deck's "purge now" button; root-only.
+    #   powermetrics(1) CPU/GPU/power sampling; root-only. Adopted 2026-09-22
+    #                   from an undeclared /etc/sudoers.d/powermetrics written
+    #                   2026-05-30, i.e. machine-local drift that predated this
+    #                   config and existed on one host only.
+    #
+    # CAVEAT, deliberately accepted: powermetrics takes `-o <file>` and runs as
+    # root, so this grant is a root-owned-file-write primitive, not merely a
+    # read. sudoers cannot constrain arguments safely (they are trivially
+    # bypassed), so the choice is all-or-nothing. Kept because the machine is a
+    # single-user laptop where the owner can already sudo interactively; drop
+    # the line if that ever stops being true.
+    #
+    # After switching, delete the now-redundant standalone rule:
+    #   sudo rm /etc/sudoers.d/powermetrics
     security.sudo.extraConfig = ''
       ${config.system.primaryUser} ALL=(root) NOPASSWD: /usr/sbin/purge
+      ${config.system.primaryUser} ALL=(root) NOPASSWD: /usr/bin/powermetrics
     '';
 
     # ── AeroSpace: i3-like tiling, no SIP shenanigans (unlike yabai) ─────────
