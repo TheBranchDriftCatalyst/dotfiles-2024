@@ -151,6 +151,19 @@ catalyst-config-diff:
     diff -u "$t" "$HOME/.catalyst/config.yaml" \
       --label '1Password' --label 'local' && echo "✔ in sync"
 
+# Delete rendered op:// secret caches. direnv re-renders on the next `cd`, at
+# the cost of one biometric prompt. No arg = this repo; `all` = everywhere
+# under $HOME, which is the only way to reach projects you no longer enter.
+op-cache-clear scope="here":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ "{{scope}}" == "all" ]]; then
+      find "$HOME" -name op-env.cache -type f -print -delete 2>/dev/null || true
+    else
+      find . -name op-env.cache -type f -print -delete
+    fi
+    echo "✔ cleared (deleted files listed above, if any)"
+
 # ── testing ─────────────────────────────────────────────────────────────────
 
 # Full end-to-end: build + activate + assert, in a throwaway container.
