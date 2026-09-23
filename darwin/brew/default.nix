@@ -62,6 +62,16 @@ in
     # reports "Apple cannot verify this app is free of malware" on every
     # launch. Trashing the app doesn't end it — brew's receipt survives, so
     # the next switch reinstalls it, freshly quarantined, and the loop repeats.
+    #
+    # GLOBAL on purpose — every cask gets this, and new ones should too.
+    # Measured 2026-09-22: 18 of 19 declared casks are flagged `auto_updates`,
+    # so all but `wakatime` hit the breakage above. Per-cask scoping was
+    # considered and rejected: it would annotate 18 entries to preserve the
+    # same behaviour and add a footgun for every cask added later.
+    #
+    # Cost, precisely: a newly installed cask skips the one-time "downloaded
+    # from the Internet" prompt on FIRST launch. Not per-execution, and apps
+    # already installed are unaffected — the xattr is written at install time.
     caskArgs.no_quarantine = true;
 
     onActivation = {
