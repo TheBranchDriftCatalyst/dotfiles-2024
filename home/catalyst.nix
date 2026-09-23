@@ -4,9 +4,8 @@
 # contexts.nix. No more machine-flavored root names.
 # catalyst-cli owns its packaging (its own flake); this module only consumes
 # packages.${system}.default — binary + cy symlink + completions + widget.
-# It also provisions ~/.catalyst: config.yaml as a LIVE symlink into this repo
-# (catalyst writes config.yaml — repo add/set — and its atomic writer resolves
-# symlinks, so edits land back here), and secrets.env rendered from 1Password.
+# It also provisions ~/.catalyst: config.yaml seeded from 1Password (it is NOT
+# in this repo — see below), and secrets.env rendered from 1Password.
 {
   pkgs,
   lib,
@@ -24,6 +23,18 @@ let
   repo = "${config.home.homeDirectory}/${dotfilesRepo}";
   # The working copy whose ./bin/catalyst useLocalCatalystCLI points at.
   localCheckout = "${devspace}/${cfg.localCatalystPath}";
+  # 1Password Document holding config.yaml — a document, not an op:// field
+  # reference, for the same reason as kube.nix: a document's payload is not a
+  # field, so `op read op://…` cannot fetch it.
+  opVault = "dev";
+  # PER-HOST document. config.yaml genuinely diverges between machines — the
+  # worktree/devspace flow is a work-machine pattern, catalystM5 works on main
+  # — so one shared document would mean a permanent drift warning on at least
+  # one host, and a push from the wrong machine would destroy the other's
+  # paths. Resolved at runtime (not from nix) so the justfile recipes and this
+  # activation always agree on the name.
+  opConfigItemPrefix = "catalyst-config";
+  catalystConfig = "${config.home.homeDirectory}/.catalyst/config.yaml";
 in
 {
   options.catalyst.devspace = {
@@ -99,11 +110,76 @@ in
       ''
     );
 
-    # Live symlink: catalyst writes config.yaml (repo add/set) THROUGH the
-    # link into this repo — same lane as vscode/claude. Never a store path:
-    # a read-only config would break every catalyst write.
-    home.file.".catalyst/config.yaml".source =
-      config.lib.file.mkOutOfStoreSymlink "${repo}/dotfiles/catalyst/config.yaml";
+    # config.yaml: deliberately NOT in this repo and NOT a symlink into it.
+    # It carries org-identifying data — jira tenant + cloud_id, work email,
+    # private repo URLs — and this repo is public. It lives in ~/.catalyst and
+    # in 1Password, nowhere else. (No credentials were ever in it: jira.token
+    # and github.token are {env.X} refs resolved from secrets.env below.)
+    #
+    # The LOCAL file is AUTHORITATIVE, because catalyst writes it between
+    # switches (config set, repo add). So activation never overwrites it:
+    #   * missing        -> seed, so a fresh machine comes up working
+    #   * present + drift -> WARN only, so you know to push
+    # Pushing is always deliberate: `just catalyst-config-push`.
+    #
+    # Seed the document once per account:
+    #   just catalyst-config-push        (creates it, named per host)
+    home.activation.catalystConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      _out=${lib.escapeShellArg catalystConfig}
+      _legacy=${lib.escapeShellArg "${repo}/dotfiles/catalyst/config.yaml"}
+      _op="${pkgs._1password-cli}/bin/op"
+      _vault=${lib.escapeShellArg opVault}
+      # HM activation runs with a nix-store-only PATH — no /usr/sbin, no /bin —
+      # so `scutil`/`hostname` are NOT resolvable by name here (that mistake
+      # aborted activation with exit 127). Absolute path, guarded by -x, and a
+      # username fallback so this can never fail: ./home is shared with the
+      # linux targets, where scutil does not exist at all.
+      _host=${lib.escapeShellArg config.home.username}
+      if [ -x /usr/sbin/scutil ]; then
+        _h=$(/usr/sbin/scutil --get LocalHostName 2>/dev/null || true)
+        [ -n "$_h" ] && _host="$_h"
+      fi
+      _item="${opConfigItemPrefix}-$_host"
+
+      _fetch() { "$_op" document get "$_item" --vault "$_vault" --out-file "$1" --force >/dev/null 2>&1 && [ -s "$1" ]; }
+
+      if [ ! -e "$_out" ]; then
+        _tmp=$(mktemp)
+        if _fetch "$_tmp"; then
+          $DRY_RUN_CMD mkdir -p "$(dirname "$_out")"
+          $DRY_RUN_CMD install -m 600 "$_tmp" "$_out"
+          echo "catalyst: config.yaml seeded from 1Password"
+        elif [ -f "$_legacy" ]; then
+          # migration off the old in-repo symlink: adopt the repo copy rather
+          # than come up with no config just because the document is unseeded
+          $DRY_RUN_CMD mkdir -p "$(dirname "$_out")"
+          $DRY_RUN_CMD install -m 600 "$_legacy" "$_out"
+          echo "catalyst: config.yaml adopted from the old in-repo copy — it is now"
+          echo "catalyst:   local only. Seed 1Password so other machines get it:"
+          echo "catalyst:     just catalyst-config-push"
+        else
+          echo "catalyst: ✖ no config.yaml, and op document get failed"
+          echo "catalyst:   (1Password locked, offline, or never seeded?)"
+          echo "catalyst:   seed it once from a machine that has the file:"
+          echo "catalyst:     just catalyst-config-push"
+        fi
+        rm -f "$_tmp"
+      else
+        # Drift check. Never destructive — the local file wins, we only report,
+        # because catalyst may have written it since the last push.
+        _tmp=$(mktemp)
+        if _fetch "$_tmp"; then
+          if ! cmp -s "$_out" "$_tmp"; then
+            echo "catalyst: ⚠ config.yaml has DRIFTED from the 1Password copy"
+            echo "catalyst:     local      $(wc -l <"$_out" | tr -d ' ') lines"
+            echo "catalyst:     1Password  $(wc -l <"$_tmp" | tr -d ' ') lines"
+            echo "catalyst:   push yours:   just catalyst-config-push"
+            echo "catalyst:   or take theirs: just catalyst-config-pull"
+          fi
+        fi
+        rm -f "$_tmp"
+      fi
+    '';
 
     # secrets.env: rendered from 1Password on every switch (op:// refs live in
     # the committed secrets.env.tpl; values only ever land in the 0600 file).

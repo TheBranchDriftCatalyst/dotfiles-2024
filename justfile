@@ -108,6 +108,49 @@ lint:
     -.githooks/pre-commit
     git stash pop -q 2>/dev/null || true
 
+# ── catalyst config (1Password-backed, never in git) ─────────────────────────
+# ~/.catalyst/config.yaml carries org-identifying data and this repo is public,
+# so the file lives in ~/.catalyst and 1Password only. The LOCAL copy is
+# authoritative — catalyst writes it — so syncing is always a deliberate act.
+# `just switch` warns when the two have drifted; these move them.
+
+# Upload the local config.yaml to 1Password (creates the document first time).
+catalyst-config-push:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    f="$HOME/.catalyst/config.yaml"
+    item="catalyst-config-$(scutil --get LocalHostName 2>/dev/null || hostname -s)"
+    [[ -f "$f" ]] || { echo "no $f to push" >&2; exit 1; }
+    if op document get "$item" --vault dev --out-file /dev/null --force >/dev/null 2>&1; then
+      op document edit "$item" "$f" --vault dev
+      echo "✔ pushed $f → 1Password (dev/$item)"
+    else
+      op document create "$f" --title "$item" --vault dev
+      echo "✔ created 1Password document dev/$item from $f"
+    fi
+
+# Overwrite the local config.yaml with 1Password's copy. Backs up first.
+catalyst-config-pull:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    f="$HOME/.catalyst/config.yaml"
+    item="catalyst-config-$(scutil --get LocalHostName 2>/dev/null || hostname -s)"
+    [[ -f "$f" ]] && cp "$f" "$f.bak" && echo "backed up → $f.bak"
+    mkdir -p "$(dirname "$f")"
+    op document get "$item" --vault dev --out-file "$f" --force
+    chmod 600 "$f"
+    echo "✔ pulled 1Password (dev/$item) → $f"
+
+# Show what differs between the local config.yaml and the 1Password copy.
+catalyst-config-diff:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    t=$(mktemp); trap 'rm -f "$t"' EXIT
+    item="catalyst-config-$(scutil --get LocalHostName 2>/dev/null || hostname -s)"
+    op document get "$item" --vault dev --out-file "$t" --force >/dev/null
+    diff -u "$t" "$HOME/.catalyst/config.yaml" \
+      --label '1Password' --label 'local' && echo "✔ in sync"
+
 # ── testing ─────────────────────────────────────────────────────────────────
 
 # Full end-to-end: build + activate + assert, in a throwaway container.
