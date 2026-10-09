@@ -140,7 +140,12 @@ in
       # Claude Code is a Homebrew cask here, NOT a nix package, so there is no
       # store path to interpolate — it has to be found on PATH. Activation runs
       # with a minimal PATH, hence the explicit prepend.
-      export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+      #
+      # /usr/bin and /bin are in that list for a reason found the hard way on
+      # 2026-10-09: activation's PATH has neither, so `git` could not fork
+      # /usr/bin/ssh and the marketplace clone died with "ssh: command not
+      # found". `env` below comes from /usr/bin too.
+      export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 
       if ! command -v claude >/dev/null 2>&1; then
         echo "ecc: ✖ claude not on PATH — skipping (install Claude Code, then re-switch)"
@@ -180,7 +185,22 @@ in
           _log="$HOME/.claude/.ecc-install.log"
           $DRY_RUN_CMD mkdir -p "$(dirname "$_log")"
           : > "$_log" 2>/dev/null || true
-          if $DRY_RUN_CMD "$_npx" --yes "ecc-universal@$_want" setup \
+          # GIT_CONFIG_GLOBAL=/dev/null, for this one clone only.
+          #
+          # home/git.nix deliberately rewrites https://github.com/ to
+          # ssh://git@github.com/ ("ssh rewriting is fine; token rewriting is
+          # not"). That rewrite is right for everything this user pushes, and
+          # wrong for this: the marketplace entry is a PUBLIC https URL, the
+          # rewrite turns it into an ssh clone, and an unattended activation
+          # then depends on an ssh binary and a loaded agent for a repository
+          # that needs no credentials at all. Ignoring global git config for
+          # the installer makes the clone plain anonymous https again.
+          #
+          # Confirmed by reproducing both halves in an activation-shaped env
+          # (env -i with activation's PATH): with the rewrite it fails with
+          # "cannot run ssh: No such file or directory"; with this set it
+          # fetches the ref. The rewrite itself is untouched for all other use.
+          if $DRY_RUN_CMD env GIT_CONFIG_GLOBAL=/dev/null "$_npx" --yes "ecc-universal@$_want" setup \
                --mode claude-plugin \
                --scope ${lib.escapeShellArg ecc.scope} \
                --hooks ${lib.escapeShellArg ecc.hooks} \
