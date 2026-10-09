@@ -47,6 +47,15 @@ switch:
     #!/usr/bin/env bash
     set -euo pipefail
     if [[ "$(uname -s)" == "Darwin" ]]; then
+      # ── settings.json must be reconciled BEFORE we switch ─────────────
+      # home/claude.nix sets force = true on ~/.claude/settings.json, because
+      # Claude Code replaces that symlink with a regular file whenever it
+      # records a setting. force lets the switch relink without tripping over
+      # the file — and would therefore OVERWRITE whatever the app wrote. This
+      # check is the other half of that: it fails the switch while the live
+      # file still holds settings the repo has not absorbed.
+      ./scripts/claude-settings-sync.sh --check
+
       # ── one password prompt, and it happens HERE ──────────────────────
       # nh escalates only at the activation step, which lands minutes into
       # the run — long after you have looked away, and then it blocks on a
@@ -260,6 +269,14 @@ vm-stop:
 
 vm-destroy:
     colima delete --force
+
+# Absorb settings Claude Code wrote into ~/.claude/settings.json back into the
+# repo. Needed because that file is the one managed path the app does NOT write
+# through the symlink — it renames over it, leaving a regular file. Run this,
+# review the diff, commit. `just switch` refuses to run while anything is
+# outstanding, so a switch can never quietly discard app-side settings.
+claude-sync:
+    ./scripts/claude-settings-sync.sh
 
 # Is ECC actually installed and active? Answers the question without guessing:
 # every line is a fact read from disk or from Claude Code itself.

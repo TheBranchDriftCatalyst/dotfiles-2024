@@ -4,8 +4,13 @@
 # nix never touches the directory itself, only plants links inside it:
 #
 #   LIVE (dotfiles/claude/, everything — app writes through the links):
-#     settings.json — /config, permission approvals, plugin enables land here
 #     CLAUDE.md     — global prompt; /memory and `#` write it
+#     settings.json — /config, permission approvals, plugin enables land here.
+#                     DOES NOT write through the link, and cannot: Claude Code
+#                     rewrites it atomically (temp file + rename), and rename
+#                     REPLACES a symlink with a regular file. It therefore
+#                     carries force = true plus a reconcile step — see the
+#                     note on the option below.
 #     agents/, commands/ — /agents creates files in them
 #     hooks/ — deliberate doctrine EXCEPTION: the app never writes these, but
 #              hook scripts are iterated like the prompt, not like nix config,
@@ -59,7 +64,24 @@ let
     enable = true;
     version = "2.2.3";
     scope = "user"; # user | project | local
-    hooks = "minimal"; # off | minimal | standard | strict
+    # The installer ARGUMENT only. Under --mode claude-plugin every hook ships
+    # inside the plugin's hooks/hooks.json and is filtered AT RUNTIME, so this
+    # value does not by itself decide which hooks run.
+    #
+    # The effective profile is persisted by the installer into settings.json as
+    #   pluginConfigs."ecc@ecc".options.hook_profile
+    # which Claude surfaces to hooks as CLAUDE_PLUGIN_OPTION_HOOK_PROFILE and
+    # scripts/lib/hook-flags.js reads. That file is repo-tracked, so the
+    # effective profile is already declarative — and it is the lever to change,
+    # NOT an ECC_HOOK_PROFILE export, which takes PRECEDENCE over the plugin
+    # option and would silently defeat any later `/plugin config` change.
+    #
+    # Kept in step with that value deliberately: this said "minimal" until
+    # 2026-10-09 while the real profile was "standard". Every profile-gated
+    # hook in 2.2.3 is gated to `standard,strict`, so a genuinely-applied
+    # "minimal" would switch 14 of the 24 off — PreCompact context preservation
+    # and the Edit/Write fact gate among them.
+    hooks = "standard"; # off | minimal | standard | strict
     pluginId = "ecc@ecc";
   };
 
@@ -70,7 +92,26 @@ let
 in
 {
   home.file = {
-    ".claude/settings.json".source = live "settings.json";
+    ".claude/settings.json" = {
+      source = live "settings.json";
+      # The app replaces this symlink with a regular file every time it records
+      # a permission, a plugin enable, or a plugin option (atomic rename — see
+      # the header). home-manager then finds a real file where its link should
+      # be and refuses to clobber it. On 2026-10-09 that aborted an entire
+      # darwin switch at checkLinkTargets, because the backup slot was already
+      # occupied by a settings.json.hm-bak left behind on 2026-09-06.
+      #
+      # force overwrites rather than backing up, so a switch can always relink.
+      # The data loss that would otherwise imply is held off by
+      # scripts/claude-settings-sync.sh: `just switch` runs it in --check mode
+      # and refuses to switch while the live file holds anything the repo has
+      # not absorbed, so app-side settings are committed, never destroyed.
+      #
+      # ONLY this file needs it. CLAUDE.md, agents/, commands/ and hooks/ were
+      # verified on 2026-10-09 (readlink -f) to still resolve through their
+      # out-of-store links into the repo — nothing rewrites those atomically.
+      force = true;
+    };
     ".claude/CLAUDE.md".source = live "CLAUDE.md";
     ".claude/agents".source = live "agents";
     ".claude/commands".source = live "commands";

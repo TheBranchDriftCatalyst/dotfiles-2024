@@ -103,5 +103,14 @@
   "git": {
     "includeCoAuthoredBy": false,
     "includeSessionTrailer": false
+  },
+  "includeCoAuthoredBy": false,
+  "pluginConfigs": {
+    "ecc@ecc": {
+      "options": {
+        "hooks_enabled": true,
+        "hook_profile": "standard"
+      }
+    }
   }
 }
