@@ -47,15 +47,6 @@ switch:
     #!/usr/bin/env bash
     set -euo pipefail
     if [[ "$(uname -s)" == "Darwin" ]]; then
-      # ── settings.json must be reconciled BEFORE we switch ─────────────
-      # home/claude.nix sets force = true on ~/.claude/settings.json, because
-      # Claude Code replaces that symlink with a regular file whenever it
-      # records a setting. force lets the switch relink without tripping over
-      # the file — and would therefore OVERWRITE whatever the app wrote. This
-      # check is the other half of that: it fails the switch while the live
-      # file still holds settings the repo has not absorbed.
-      ./scripts/claude-settings-sync.sh --check
-
       # ── one password prompt, and it happens HERE ──────────────────────
       # nh escalates only at the activation step, which lands minutes into
       # the run — long after you have looked away, and then it blocks on a
@@ -284,13 +275,20 @@ vm-stop:
 vm-destroy:
     colima delete --force
 
-# Absorb settings Claude Code wrote into ~/.claude/settings.json back into the
-# repo. Needed because that file is the one managed path the app does NOT write
-# through the symlink — it renames over it, leaving a regular file. Run this,
-# review the diff, commit. `just switch` refuses to run while anything is
-# outstanding, so a switch can never quietly discard app-side settings.
+# Absorb settings the app wrote into ~/.claude/settings.json back into the repo.
+# That file is app-owned on purpose — it is rewritten by rename(2), so it cannot
+# be a symlink (the long version is in home/claude.nix's header). The Stop hook
+# runs this after every turn, so it is normally a no-op by the time you reach
+# for it; it is here for the times you want to look.
 claude-sync:
     ./scripts/claude-settings-sync.sh
+
+# The other direction: repo -> ~/.claude/settings.json, for when the tracked
+# copy was hand-edited. Refuses while the live file holds anything unabsorbed,
+# so it cannot overwrite a setting the app made and the repo has not seen.
+# Rare by design — settings normally change through /config, not by editing JSON.
+claude-push:
+    ./scripts/claude-settings-sync.sh --push
 
 # Is ECC actually installed and active? Answers the question without guessing:
 # every line is a fact read from disk or from Claude Code itself.

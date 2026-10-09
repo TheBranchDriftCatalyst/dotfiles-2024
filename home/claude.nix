@@ -3,20 +3,33 @@
 # ~/.claude is mostly runtime state (projects/, plugins/, sessions, caches) —
 # nix never touches the directory itself, only plants links inside it:
 #
-#   LIVE (dotfiles/claude/, everything — app writes through the links):
+#   LIVE (dotfiles/claude/, app writes THROUGH the out-of-store links):
 #     CLAUDE.md     — global prompt; /memory and `#` write it
-#     settings.json — /config, permission approvals, plugin enables land here.
-#                     DOES NOT write through the link, and cannot: Claude Code
-#                     rewrites it atomically (temp file + rename), and rename
-#                     REPLACES a symlink with a regular file. It therefore
-#                     carries force = true plus a reconcile step — see the
-#                     note on the option below.
 #     agents/, commands/ — /agents creates files in them
 #     hooks/ — deliberate doctrine EXCEPTION: the app never writes these, but
 #              hook scripts are iterated like the prompt, not like nix config,
 #              so they ride the live link (DJ's call, 2026-09-10). git-guard.sh
 #              is wired in settings.json; the other three are PARKED (need the
 #              beads/memory-service MCPs — operator notes in each script).
+#
+#   SEEDED, NOT LINKED (settings.json):
+#     /config, permission approvals, plugin enables and plugin options land
+#     here. It is the one managed path the app does NOT write through, and it
+#     cannot be: Claude Code rewrites it atomically (temp file, then rename
+#     over the target) and rename(2) replaces whatever is at the path — a
+#     symlink included. Linking it was tried; the link died on the first
+#     setting the app recorded, home-manager then found a regular file where
+#     its link belonged, and a darwin switch aborted outright at
+#     checkLinkTargets against a stale settings.json.hm-bak. Keeping the
+#     fiction alive needed force = true, a switch preflight and a relink step:
+#     four mechanisms defending a false premise.
+#
+#     So the app owns the live file. Nix SEEDS it when absent (that is all a
+#     fresh machine needs) and never touches it again, which means a switch can
+#     no longer damage it or be blocked by it. The repo copy is kept in step by
+#     scripts/claude-settings-sync.sh: a Stop hook absorbs app-side additions
+#     after each turn, so the tracked copy cannot silently drift, and
+#     `just claude-push` is the explicit, rarely-needed other direction.
 #
 # Plugin identity is declarative: settings.json carries
 # extraKnownMarketplaces + enabledPlugins, so a fresh machine re-registers
@@ -58,7 +71,7 @@ let
     # So the next activation reconciles rather than installs from nothing. The
     # exact command it runs was dry-run first and reports "would-update":
     #   npx ecc-universal@2.2.3 setup --mode claude-plugin --scope user \
-    #     --hooks minimal --yes --dry-run --json
+    #     --hooks standard --yes --dry-run --json
     # Setting this false again stops reinstalls but does NOT uninstall; that
     # needs `/plugin uninstall ecc@ecc` plus reverting the settings.json diff.
     enable = true;
@@ -88,35 +101,42 @@ let
   # Written by the activation script, read by its own guard. Mirrors how
   # catalyst.nix owns ~/.catalyst/secrets.env.
   eccStamp = "${config.home.homeDirectory}/.claude/.ecc-version";
-  eccSettings = "${repo}/dotfiles/claude/settings.json";
+  repoSettings = "${repo}/dotfiles/claude/settings.json";
 in
 {
   home.file = {
-    ".claude/settings.json" = {
-      source = live "settings.json";
-      # The app replaces this symlink with a regular file every time it records
-      # a permission, a plugin enable, or a plugin option (atomic rename — see
-      # the header). home-manager then finds a real file where its link should
-      # be and refuses to clobber it. On 2026-10-09 that aborted an entire
-      # darwin switch at checkLinkTargets, because the backup slot was already
-      # occupied by a settings.json.hm-bak left behind on 2026-09-06.
-      #
-      # force overwrites rather than backing up, so a switch can always relink.
-      # The data loss that would otherwise imply is held off by
-      # scripts/claude-settings-sync.sh: `just switch` runs it in --check mode
-      # and refuses to switch while the live file holds anything the repo has
-      # not absorbed, so app-side settings are committed, never destroyed.
-      #
-      # ONLY this file needs it. CLAUDE.md, agents/, commands/ and hooks/ were
-      # verified on 2026-10-09 (readlink -f) to still resolve through their
-      # out-of-store links into the repo — nothing rewrites those atomically.
-      force = true;
-    };
+    # NOTE: settings.json is deliberately absent — the app owns it. See the
+    # header; it is seeded by the activation entry below instead.
     ".claude/CLAUDE.md".source = live "CLAUDE.md";
     ".claude/agents".source = live "agents";
     ".claude/commands".source = live "commands";
     ".claude/hooks".source = live "hooks";
   };
+
+  # Seed settings.json on a machine that has none. Deliberately NOT a
+  # home.file link and deliberately not idempotent-overwrite: the whole point
+  # is that an existing live file is the app's, so this only ever creates. A
+  # fresh machine gets the committed settings (marketplaces, enabled plugins,
+  # hooks, plugin options); every machine after first boot is left alone and
+  # kept in step by the Stop hook instead.
+  #
+  # It also covers the changeover on machines that DID have the old link: this
+  # path was a managed home.file until 2026-10-09, so the first switch after
+  # that removal may clean up what it believes it owns there. entryAfter
+  # [ "writeBoundary" ] puts this after home-manager has finished linking, so
+  # if the file does go, it comes straight back from the repo — which is why
+  # absorbing before switching (the Stop hook does it continuously) is what
+  # makes the changeover lossless.
+  home.activation.claudeSettingsSeed = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    _live="${config.home.homeDirectory}/.claude/settings.json"
+    if [ -e "$_live" ]; then
+      :
+    else
+      $DRY_RUN_CMD mkdir -p "$(dirname "$_live")"
+      $DRY_RUN_CMD install -m 600 ${lib.escapeShellArg repoSettings} "$_live"
+      echo "claude: seeded settings.json from the repo (first run on this machine)"
+    fi
+  '';
 
   # ECC plugin, installed through its OWN official installer rather than by
   # planting files. `npx ecc-universal setup` drives the real
@@ -125,15 +145,18 @@ in
   # mean forfeiting `ecc doctor` / `ecc repair` and the hook-profile mechanism.
   # So nix owns WHEN and WITH WHAT ARGUMENTS, the installer owns HOW.
   #
-  # The installer writes into ~/.claude/settings.json, which is a live
-  # out-of-store symlink into dotfiles/ — so its marketplace + enablement lines
-  # land in the repo as a reviewable diff, and that commit is what makes a
-  # fresh machine reproduce this.
+  # The installer writes into ~/.claude/settings.json — the app's own file, not
+  # a link into dotfiles/ (see the header). Its marketplace and enablement
+  # lines reach the repo through scripts/claude-settings-sync.sh, which the Stop
+  # hook runs, and that commit is what makes a fresh machine reproduce this.
+  # Worth knowing: this entry runs AFTER home.file links are planted, so when
+  # the installer does run it rewrites settings.json last — which is exactly why
+  # trying to keep a symlink there was hopeless even within a single switch.
   home.activation.eccPlugin = lib.mkIf ecc.enable (
     lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       _want=${lib.escapeShellArg ecc.version}
       _stamp=${lib.escapeShellArg eccStamp}
-      _settings=${lib.escapeShellArg eccSettings}
+      _settings=${lib.escapeShellArg repoSettings}
       _npx="${pkgs.nodejs}/bin/npx"
       _jq="${pkgs.jq}/bin/jq"
 

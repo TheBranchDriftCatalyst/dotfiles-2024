@@ -10,6 +10,17 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -x $HOME/.dotfiles/scripts/claude-settings-sync.sh ]; then $HOME/.dotfiles/scripts/claude-settings-sync.sh --quiet; fi"
+          }
+        ]
+      }
     ]
   },
   "statusLine": {
