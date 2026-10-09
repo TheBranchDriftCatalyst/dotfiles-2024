@@ -83,3 +83,28 @@ is the remaining step — it needs an interactive sudo prompt.
 No `inputs.nixpkgs.follows` on the `hermes-agent` input on purpose — it
 builds its Python deps via uv2nix/pyproject-nix against its own pinned
 nixpkgs-unstable, and forcing a follow risks a lockfile mismatch.
+
+**Duplicate install, resolved on catalystM5 2026-10-09 — CHECK THE TEAKBOOK:**
+
+There was a second, older hermes from the upstream git installer (27 May) and
+it WON on PATH: `~/.local/bin/hermes` (position 4) shadowed the nix binary in
+`/etc/profiles/per-user/<user>/bin` (position 6). So `hermes` ran v0.14.0 from
+a 977MB venv at `~/.hermes/hermes-agent`, not the pinned build — while
+reporting `Install method: git` and the wrong upstream revision, because
+`~/.hermes/.install_method` was a leftover marker.
+
+Both installs shared `~/.hermes` as HERMES_HOME, so config/auth/state were
+common and only the binary was duplicated. Fixed by deleting the shim and the
+whole of `~/.hermes`, then re-running the generation's `activate`: the module
+mkdir -p's HERMES_HOME and merges config.yaml, so nix rebuilt it from nothing.
+config.yaml went from 13k of accumulated manual cruft to 185 bytes of exactly
+what is declared, and `hermes --version` now reports `home-manager` and the
+pinned revision b56a1024.
+
+The work machine very likely has the same stale install — check with
+`command -v hermes` and `hermes --version | grep 'Install method'` before
+trusting that `hermes` there is the nix one.
+
+A small archive of the non-venv files (SOUL.md, auth.json, the old config and
+its backups, 8.5M) is at `~/.hermes-pre-nuke-2026-10-09.tar.gz` on catalystM5.
+Delete it once you are sure nothing is wanted from it.
