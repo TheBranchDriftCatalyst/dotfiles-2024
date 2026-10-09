@@ -61,7 +61,21 @@ switch:
       # the run — long after you have looked away, and then it blocks on a
       # prompt nobody is watching. Priming the sudo timestamp up front moves
       # the prompt to the one moment you are definitely still at the keyboard.
-      sudo -v
+      # sudo cannot prompt without a TTY, so a non-interactive runner (an
+      # agent's bash, a CI step, `just switch` piped into something) dies right
+      # here instead of minutes later inside nh. Failing this early is correct;
+      # the stock sudo message just does not say WHY a rebuild wanted a
+      # password, so say it.
+      if ! sudo -v; then
+        echo >&2
+        echo "!! switch needs root: nh escalates at the activation step." >&2
+        if [ ! -t 0 ]; then
+          echo "   No TTY here, so sudo had nothing to prompt on. Run \`just switch\`" >&2
+          echo "   from a real terminal — or prime the timestamp there first with" >&2
+          echo "   \`sudo -v\`, and this will reuse it." >&2
+        fi
+        exit 1
+      fi
       # The default timestamp grace is 5 minutes and a cold rebuild blows
       # straight past it, which is the other way this turns into a second
       # prompt. Refresh in the background until the recipe exits.
