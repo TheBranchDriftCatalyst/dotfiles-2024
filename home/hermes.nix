@@ -98,8 +98,22 @@ in
       description = ''
         Context window to ask ollama for, as `model.ollama_num_ctx`.
 
-        THIS IS LOAD-BEARING, not tuning. Without it ollama loaded the 36B at
-        its native 262144-token window on 2026-10-09 and `ollama ps` reported:
+        DECLARATION, not a request. This tells hermes what window the server
+        really serves; it does NOT change the server. Measured on 2026-10-09:
+        with this set to 65536, hermes duly sends options.num_ctx=65536 in
+        extra_body, and `ollama ps` still reported CONTEXT 262144 — ollama's
+        OpenAI-compatible /v1 endpoint ignores the native `options` field.
+        hermes' own error text says as much: "set model.ollama_num_ctx in
+        config.yaml to the window it really serves".
+
+        So keep this in step with the SERVER's window. It earns its place for
+        two reasons anyway: hermes refuses to start below
+        MINIMUM_CONTEXT_LENGTH = 64_000 (32768 was rejected in 2.1s), and it
+        bounds hermes' own token budgeting to something sane instead of the
+        524,288 the provider advertises.
+
+        WHY THE WINDOW MATTERS AT ALL — the still-open problem. ollama loads
+        this model at its native 262144-token window and `ollama ps` reports:
 
           SIZE 305 GB   PROCESSOR 63%/37% CPU/GPU   CONTEXT 262144
 
@@ -116,10 +130,16 @@ in
         fits 128GB but leaves little room for a second model even though the
         server allows OLLAMA_MAX_LOADED_MODELS=3.
 
-        Check `ollama ps` after changing this: SIZE should be well under 128GB
-        and PROCESSOR should read ~100% GPU. If a run ever goes back to
-        splitting onto the CPU, this is the first thing to look at — and the
-        fix then is a smaller model from `models`, not a smaller window.
+        The actual fix has to be SERVER-side, and the server is mac-sdlc-node's
+        (see the header): either OLLAMA_CONTEXT_LENGTH on its launchd agent, or
+        a per-model Modelfile `num_ctx` — that repo already keeps Modelfiles
+        under config/ollama/. Until one of those lands, this model generates
+        from the CPU no matter what is set here, which is what made two runs
+        look like hangs (abandoned at 387s and 449s).
+
+        Check `ollama ps` when it does land: SIZE well under 128GB and
+        PROCESSOR ~100% GPU. If a run still splits onto the CPU, the remaining
+        lever is a smaller model from `models`, not a smaller window.
 
         Also written as `model.context_length` so hermes' own token budgeting
         agrees with what it asked ollama for, which its runtime warning at
@@ -213,7 +233,8 @@ in
           default = cfg.model;
           provider = "ollama";
           base_url = cfg.ollamaUrl;
-          # see contextTokens — this is what keeps the model on the GPU
+          # see contextTokens: declares the server's window to hermes and
+          # clears its 64K floor — it does NOT resize the server's context
           ollama_num_ctx = cfg.contextTokens;
           context_length = cfg.contextTokens;
         };
