@@ -12,7 +12,7 @@ fi
 
 # --- Block destructive git operations ---
 # Allow --force-with-lease (safe force push) — only block bare --force
-if echo "$COMMAND" | grep -qE '\-\-force-with-lease'; then
+if echo "$COMMAND" | grep -qF -- '--force-with-lease'; then
   : # safe, skip force-push checks
 elif echo "$COMMAND" | grep -qiE 'git push.*--force|push --force'; then
   echo "BLOCKED: Destructive git command detected ('force push'). Ask the user for explicit confirmation before running this command." >&2
@@ -54,8 +54,16 @@ if echo "$COMMAND" | grep -qE 'git commit'; then
     echo "BLOCKED: Do not add Co-Authored-By lines to commit messages." >&2
     exit 2
   fi
-  # Check for Claude/AI attribution in the commit message (not paths)
-  if echo "$COMMIT_MSG" | grep -qiE 'claude|anthropic|ai.generated|ai.assisted'; then
+  # Check for AI attribution in the commit message. The comment has always said
+  # "not paths", but the check did not honour it: with `-F` there is no -m to
+  # extract, so COMMIT_MSG falls back to the whole command line, and ANY path
+  # containing the word matched. A commit touching home/claude.nix, or writing
+  # the message to a file under a ~/.claude-... scratch dir, was refused for
+  # naming its own files. Strip path-shaped tokens (anything containing a /)
+  # before the word check — prose attribution never hides inside a path, so
+  # intent is preserved and the false positives go away.
+  COMMIT_MSG_PROSE=$(echo "$COMMIT_MSG" | tr '[:space:]' '\n' | grep -v '/' | tr '\n' ' ')
+  if echo "$COMMIT_MSG_PROSE" | grep -qiE 'claude|anthropic|ai.generated|ai.assisted'; then
     echo "BLOCKED: Do not mention Claude, Anthropic, or AI in commit messages." >&2
     exit 2
   fi
