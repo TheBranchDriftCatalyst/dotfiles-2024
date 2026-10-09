@@ -54,6 +54,15 @@ orgs:
         url: git@github.com:TicketGuardian/API-Claim.git
         default_base: develop
         jira_project: DEV
+        # jira_components disambiguates the DEV project, which api-claim,
+        # playwright-tests and protecht-platform all share — without it a DEV
+        # ticket is unroutable and begin falls back to defaults.repo. Matched
+        # against the ticket's Jira components AND its "[Bracket]" summary
+        # prefix, word-order- and punctuation-insensitively, so "Claims API"
+        # catches both the "Claims API" component and the "[API-Claims]" tag.
+        jira_components:
+          - Claims API
+          - API-Claims
       claims-dashboard:
         url: git@github.com:TicketGuardian/claims-dashboard.git
         default_base: master
@@ -95,6 +104,8 @@ orgs:
         url: git@github.com:TicketGuardian/protecht-platform.git
         default_base: develop
         jira_project: DEV
+        jira_components:
+          - Platform
       protecht-reporting:
         url: git@github.com:TicketGuardian/protecht-reporting.git
         default_base: main
