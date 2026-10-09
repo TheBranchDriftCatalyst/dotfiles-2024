@@ -274,8 +274,24 @@ ecc-status:
     printf '  %-22s %s\n' "stamp file" "$([ -r $stamp ] && cat $stamp || echo '<absent — installer never completed>')"
     printf '  %-22s %s\n' "enabledPlugins" "$(jq -r '(.enabledPlugins // {}) | has("ecc@ecc")' $settings 2>/dev/null)"
     printf '  %-22s %s\n' "marketplace" "$(jq -r '(.extraKnownMarketplaces // {}) | keys | join(",") | select(.!="") // "<none>"' $settings 2>/dev/null)"
-    printf '  %-22s %s\n' "plugin content" "$(ls -d ~/.claude/plugins/*ecc* 2>/dev/null | head -1 || echo '<not downloaded>')"
-    printf '  %-22s %s\n' "hooks in settings" "$(jq -r '[.hooks // {} | to_entries[] | .value[]?.hooks[]?.command] | map(select(test("ecc";"i"))) | length' $settings 2>/dev/null)"
+    # installed_plugins.json is the authoritative install record. NOT a glob of
+    # ~/.claude/plugins/ — an earlier version of this recipe globbed '*ecc*'
+    # there and always missed, because a marketplace install lands under
+    # plugins/cache/<marketplace>/<name>/<version>/. It reported
+    # "<not downloaded>" for an install that was present and working.
+    registry=~/.claude/plugins/installed_plugins.json
+    installpath=$(jq -r '.plugins["ecc@ecc"][0].installPath // empty' $registry 2>/dev/null)
+    printf '  %-22s %s\n' "plugin content" "${installpath:-<not downloaded>}"
+    # Hooks ship INSIDE the plugin (its hooks/hooks.json); settings.json carries
+    # none for a plugin install. Both are printed because 0-in-settings is the
+    # CORRECT reading here and used to look like a broken install.
+    hooksjson="$installpath/hooks/hooks.json"
+    if [ -n "$installpath" ] && [ -r "$hooksjson" ]; then
+      printf '  %-22s %s\n' "hooks (plugin)" "$(jq -r '[(.hooks//{})[][]?.hooks[]?]|length' $hooksjson 2>/dev/null) entries / $(jq -r '(.hooks//{})|length' $hooksjson 2>/dev/null) events"
+    else
+      printf '  %-22s %s\n' "hooks (plugin)" "<no hooks.json in the install>"
+    fi
+    printf '  %-22s %s\n' "hooks in settings" "$(jq -r '[.hooks // {} | to_entries[] | .value[]?.hooks[]?.command] | map(select(test("ecc";"i"))) | length' $settings 2>/dev/null) (0 is correct for a plugin install)"
     # the authoritative check: ask Claude Code, not the filesystem
     if command -v claude >/dev/null; then
       printf '  %-22s %s\n' "claude plugin list" "$(claude plugin list 2>/dev/null | grep -i ecc || echo '<ecc not listed>')"
