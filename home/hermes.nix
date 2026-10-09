@@ -17,16 +17,33 @@
 # it across the LAN by mDNS name — hence ollamaUrl is PER-HOST below rather
 # than a single baked-in string.
 #
-# ollama itself is DELIBERATELY NOT nix-managed (DJ's call, 2026-10-09): it is
-# a Homebrew install driven by a hand-written launchd agent at
-# ~/Library/LaunchAgents/com.ollama.server.plist, and that existing setup is
-# the one we use. Recording the contract this module depends on, since nothing
-# in the repo would otherwise tell you it exists:
+# ollama is DELIBERATELY NOT nix-managed (DJ's call, 2026-10-09), because it is
+# already owned elsewhere and that existing system is the one we use:
+#
+#   ~/catalyst-devspace/workspace/mac-sdlc-node
+#
+# That project is the node's model plane. launchd/com.ollama.server.plist there
+# is the SOURCE of the agent installed at ~/Library/LaunchAgents (verified
+# identical 2026-10-09), and models.yaml is its single source of truth for
+# which models this box serves. So nix declares the CLIENT only; the server,
+# its tuning and its model set belong to that repo.
+#
+# Two things from the agent that this module silently depends on:
 #
 #   OLLAMA_HOST=0.0.0.0:11434   the reason teakbookM5DJ can reach it at all;
-#                               without it the LAN ollamaUrl above is dead
+#                               on loopback the LAN ollamaUrl above is dead
 #   OLLAMA_KEEP_ALIVE=30m       how long a loaded model stays resident
-#   OLLAMA_MAX_LOADED_MODELS=3, OLLAMA_NUM_PARALLEL=4, OLLAMA_FLASH_ATTENTION=1
+#   (also OLLAMA_MAX_LOADED_MODELS=3, NUM_PARALLEL=4, FLASH_ATTENTION=1)
+#
+# The model string below is EXACTLY the `name:` of the registry's
+# `alias: hermes-4.3-36b` entry — audited there on 2026-09-24 and matched
+# byte-for-byte on 2026-10-09. Use that raw tag, NOT the alias: aliases are
+# LiteLLM/dashboard routing names, and this module speaks to ollama directly.
+#
+# COUPLING, so a future reader is not surprised: `task models:cleanup` in that
+# repo DELETES any installed ollama tag models.yaml stops declaring. If the
+# hermes-4.3-36b entry is ever retired there, the weights this module points at
+# go with it. Change the model here and in models.yaml together.
 #
 # Practical consequence of keep-alive, not a fault: the model below is 25GB, so
 # the FIRST request after 30 idle minutes spends ~6.5 min loading before a
