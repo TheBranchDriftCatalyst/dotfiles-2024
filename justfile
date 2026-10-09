@@ -47,8 +47,37 @@ switch:
     #!/usr/bin/env bash
     set -euo pipefail
     if [[ "$(uname -s)" == "Darwin" ]]; then
+      # ── one password prompt, and it happens HERE ──────────────────────
+      # nh escalates only at the activation step, which lands minutes into
+      # the run — long after you have looked away, and then it blocks on a
+      # prompt nobody is watching. Priming the sudo timestamp up front moves
+      # the prompt to the one moment you are definitely still at the keyboard.
+      sudo -v
+      # The default timestamp grace is 5 minutes and a cold rebuild blows
+      # straight past it, which is the other way this turns into a second
+      # prompt. Refresh in the background until the recipe exits.
+      # The parent-liveness check is load-bearing, not belt-and-braces: a
+      # successful `sudo -n true` REFRESHES the timestamp, so a loop guarded only
+      # on the cache sustains its own exit condition and would orphan forever if
+      # this recipe were SIGKILLed past the trap. `$$` is the recipe's pid even
+      # inside the subshell, so the loop dies with it either way.
+      ( while kill -0 "$$" 2>/dev/null && sudo -n true 2>/dev/null; do sleep 50; done ) &
+      _sudo_keepalive=$!
+      trap 'kill "${_sudo_keepalive}" 2>/dev/null || true' EXIT
       if command -v nh >/dev/null; then
+        # nh buffers activation output and drops it on darwin (nh#233, see
+        # switch-raw below), so an activation-script failure can pass silently.
+        # Activation entries that matter write a durable log; surface it here
+        # rather than trusting what nh chose to print.
         nh darwin switch .
+        for _log in ~/.claude/.ecc-install.log; do
+          [ -s "$_log" ] || continue
+          if grep -qi 'error\|failed\|SETUP_FAILED' "$_log"; then
+            echo
+            echo "!! activation reported a failure in $(basename "$_log"):"
+            sed 's/^/     /' "$_log"
+          fi
+        done
       else
         sudo nix run nix-darwin -- switch --flake ".#{{host}}"
       fi
@@ -231,3 +260,44 @@ vm-stop:
 
 vm-destroy:
     colima delete --force
+
+# Is ECC actually installed and active? Answers the question without guessing:
+# every line is a fact read from disk or from Claude Code itself.
+ecc-status:
+    #!/usr/bin/env bash
+    # no `set -e` — every probe must run even when the earlier ones fail
+    want=$(grep -m1 'version = "' home/claude.nix | sed 's/.*"\(.*\)".*/\1/')
+    enable=$(grep -m1 'enable = ' home/claude.nix | tr -d ' ;' | cut -d= -f2)
+    stamp=~/.claude/.ecc-version
+    settings=dotfiles/claude/settings.json
+    printf '  %-22s %s\n' "declared (nix)" "enable=$enable version=$want"
+    printf '  %-22s %s\n' "stamp file" "$([ -r $stamp ] && cat $stamp || echo '<absent — installer never completed>')"
+    printf '  %-22s %s\n' "enabledPlugins" "$(jq -r '(.enabledPlugins // {}) | has("ecc@ecc")' $settings 2>/dev/null)"
+    printf '  %-22s %s\n' "marketplace" "$(jq -r '(.extraKnownMarketplaces // {}) | keys | join(",") | select(.!="") // "<none>"' $settings 2>/dev/null)"
+    printf '  %-22s %s\n' "plugin content" "$(ls -d ~/.claude/plugins/*ecc* 2>/dev/null | head -1 || echo '<not downloaded>')"
+    printf '  %-22s %s\n' "hooks in settings" "$(jq -r '[.hooks // {} | to_entries[] | .value[]?.hooks[]?.command] | map(select(test("ecc";"i"))) | length' $settings 2>/dev/null)"
+    # the authoritative check: ask Claude Code, not the filesystem
+    if command -v claude >/dev/null; then
+      printf '  %-22s %s\n' "claude plugin list" "$(claude plugin list 2>/dev/null | grep -i ecc || echo '<ecc not listed>')"
+    fi
+    echo
+    on=$(jq -r '(.enabledPlugins // {}) | has("ecc@ecc")' $settings 2>/dev/null)
+    have=$(cat $stamp 2>/dev/null)
+    if [ "$enable" != true ]; then
+      echo "  => OFF by declaration (enable = false)$([ "$on" = true ] && echo ' BUT STILL INSTALLED — nix will not remove it; use /plugin uninstall ecc@ecc')"
+    elif [ "$on" = true ] && [ "$have" = "$want" ]; then
+      echo "  => ON at the pinned version, installed by nix"
+    elif [ "$on" = true ]; then
+      echo "  => ON, but NOT installed by nix (stamp '${have:-absent}' != '$want')."
+      echo "     Means it was installed by hand, or activation was skipped. The next"
+      echo "     switch that actually runs activation will reconcile and stamp it."
+    else
+      echo "  => ARMED but NOT INSTALLED — activation has not run successfully yet"
+    fi
+    # `|| true` matters: this is the recipe's last command, so a missing log
+    # would otherwise make `just ecc-status` exit 1 on a perfectly healthy box.
+    if [ -s ~/.claude/.ecc-install.log ]; then
+      echo; echo "  last install attempt (~/.claude/.ecc-install.log):"
+      tail -4 ~/.claude/.ecc-install.log | sed 's/^/    /'
+    fi || true
+    exit 0
