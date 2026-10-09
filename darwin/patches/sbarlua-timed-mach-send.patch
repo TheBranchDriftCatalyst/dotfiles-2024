@@ -1,0 +1,118 @@
+--- a/src/mach.h
++++ b/src/mach.h
+@@ -7,6 +7,37 @@
+ #include <unistd.h>
+ #include <CoreFoundation/CoreFoundation.h>
+ 
++#include <time.h>
++
++// Why this exists: the bar froze, repeatedly, with both processes parked in
++// mach_msg2_trap at 0% CPU -- sketchybar blocked sending an event to its Lua
++// client while the client was blocked sending a command back, neither draining
++// its own port. Stacks sampled in the wild 2026-09-22 and 2026-09-24.
++//
++// Two things were wrong, and the first is an outright API misuse.
++//
++// 1. Sends used MACH_MSG_TIMEOUT_NONE, so they could block forever. Adding
++//    MACH_SEND_TIMEOUT alone does NOT fix that, which is the trap: the library
++//    silently retries an interrupted send and REUSES the original timeout, so
++//    the wall-clock wait stays unbounded. This is documented -- "If
++//    MACH_SEND_TIMEOUT is used without MACH_SEND_INTERRUPT, then the timeout
++//    duration might not be accurate, because when the call is interrupted and
++//    automatically retried, the original timeout is used" (Mach Reference
++//    Manual, Message Send; xnu mach_msg2_internal only runs its
++//    `while (mr == MACH_SEND_INTERRUPTED)` loop when MACH64_SEND_INTERRUPT is
++//    clear). Verified in the wild: parked for hours in a "timed" send.
++//    So: pass MACH_SEND_INTERRUPT, own the retry, and re-arm against an
++//    ABSOLUTE deadline. Incidental signals never cost a message; nothing can
++//    pin the thread past the budget.
++//
++// 2. A bounded wait is still a wait. Delivering an event to a client must never
++//    block the bar at all -- see the budget=0 call site below.
++#define MACH_SEND_TIMEOUT_MS 100
++
++#ifndef NSEC_PER_MSEC
++#define NSEC_PER_MSEC 1000000ull
++#endif
++
+ typedef char* env;
+ 
+ #define MACH_HANDLER(name) void name(char* message, size_t size)
+@@ -110,6 +141,30 @@
+ 
+   if (msg_return != MACH_MSG_SUCCESS) {
+     buffer->message.descriptor.address = NULL;
++  }
++}
++
++static inline mach_msg_return_t mach_send_bounded(struct mach_message* msg,
++                                             uint32_t budget_ms) {
++  uint64_t deadline = clock_gettime_nsec_np(CLOCK_MONOTONIC)
++                      + (uint64_t)budget_ms * NSEC_PER_MSEC;
++  mach_msg_timeout_t left = budget_ms;
++
++  for (;;) {
++    // always attempt at least once, so budget 0 still tries and then gives up
++    mach_msg_return_t ret = mach_msg(&msg->header,
++                                     MACH_SEND_MSG | MACH_SEND_TIMEOUT
++                                                   | MACH_SEND_INTERRUPT,
++                                     sizeof(struct mach_message),
++                                     0,
++                                     MACH_PORT_NULL,
++                                     left,
++                                     MACH_PORT_NULL);
++    if (ret != MACH_SEND_INTERRUPTED) return ret;
++
++    uint64_t now = clock_gettime_nsec_np(CLOCK_MONOTONIC);
++    if (now >= deadline) return MACH_SEND_TIMED_OUT;
++    left = (mach_msg_timeout_t)((deadline - now) / NSEC_PER_MSEC);
+   }
+ }
+ 
+@@ -153,15 +208,16 @@
+   msg.descriptor.deallocate = false;
+   msg.descriptor.type = MACH_MSG_OOL_DESCRIPTOR;
+ 
+-  mach_msg_return_t ret = mach_msg(&msg.header,
+-                                   MACH_SEND_MSG,
+-                                   sizeof(struct mach_message),
+-                                   0,
+-                                   MACH_PORT_NULL,
+-                                   MACH_MSG_TIMEOUT_NONE,
+-                                   MACH_PORT_NULL              );
++  mach_msg_return_t ret = mach_send_bounded(&msg, MACH_SEND_TIMEOUT_MS);
+   
+-  if (ret != KERN_SUCCESS) return NULL;
++  if (ret != KERN_SUCCESS) {
++    // was a leak: the early return abandoned the reply port it had just made
++    if (response) {
++      mach_port_mod_refs(task, response_port, MACH_PORT_RIGHT_RECEIVE, -1);
++      mach_port_deallocate(task, response_port);
++    }
++    return NULL;
++  }
+ 
+   char* rsp = NULL;
+   if (response) {
+--- a/src/sketchybar.c
++++ b/src/sketchybar.c
+@@ -250,6 +250,10 @@
+       printf("[!] Lua: %s\n", lua_tostring(g_state, -1));
+     }
+     transaction_commit(g_state);
++    // one-shot: this ref was created per sbar.exec call (see exec()), and
++    // nothing ever released it. cpu alone execs every 5s, so this pinned
++    // thousands of dead closures in the Lua registry per day.
++    luaL_unref(g_state, LUA_REGISTRYINDEX, callback_ref);
+     return;
+   }
+   env env = message;
+@@ -775,6 +779,8 @@
+   }
+ 
+   transaction_commit(g_state);
++  // one-shot timer (interval 0), so the ref delay() took can never fire again
++  luaL_unref(g_state, LUA_REGISTRYINDEX, callback_ref);
+ }
+ 
+ int delay(lua_State* state) {

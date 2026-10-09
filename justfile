@@ -192,6 +192,14 @@ test-direnv-installed:
 test-sketchybar:
     ./test/sketchybar/run.sh
 
+# The mach send contract both IPC patches depend on. A send timeout ALONE does
+# NOT bound a send — the library retries on interrupt and reuses the original
+# timeout — which is exactly the bug that shipped once already. Fails loudly if
+# MACH_SEND_INTERRUPT is ever dropped from darwin/patches/ (full writeup at the
+# top of send_bounded_test.c). Real mach IPC, no bar process, ~5s.
+test-mach:
+    ./test/mach/run.sh
+
 # Interactive shell in the test container, for poking at failures.
 test-shell:
     docker build -f test/Dockerfile -t {{image}} .

@@ -1,0 +1,110 @@
+--- a/src/mach.c
++++ b/src/mach.c
+@@ -4,6 +4,37 @@
+ #include <stdint.h>
+ #include <CoreFoundation/CoreFoundation.h>
+ 
++#include <time.h>
++
++// Why this exists: the bar froze, repeatedly, with both processes parked in
++// mach_msg2_trap at 0% CPU -- sketchybar blocked sending an event to its Lua
++// client while the client was blocked sending a command back, neither draining
++// its own port. Stacks sampled in the wild 2026-09-22 and 2026-09-24.
++//
++// Two things were wrong, and the first is an outright API misuse.
++//
++// 1. Sends used MACH_MSG_TIMEOUT_NONE, so they could block forever. Adding
++//    MACH_SEND_TIMEOUT alone does NOT fix that, which is the trap: the library
++//    silently retries an interrupted send and REUSES the original timeout, so
++//    the wall-clock wait stays unbounded. This is documented -- "If
++//    MACH_SEND_TIMEOUT is used without MACH_SEND_INTERRUPT, then the timeout
++//    duration might not be accurate, because when the call is interrupted and
++//    automatically retried, the original timeout is used" (Mach Reference
++//    Manual, Message Send; xnu mach_msg2_internal only runs its
++//    `while (mr == MACH_SEND_INTERRUPTED)` loop when MACH64_SEND_INTERRUPT is
++//    clear). Verified in the wild: parked for hours in a "timed" send.
++//    So: pass MACH_SEND_INTERRUPT, own the retry, and re-arm against an
++//    ABSOLUTE deadline. Incidental signals never cost a message; nothing can
++//    pin the thread past the budget.
++//
++// 2. A bounded wait is still a wait. Delivering an event to a client must never
++//    block the bar at all -- see the budget=0 call site below.
++#define MACH_SEND_TIMEOUT_MS 100
++
++#ifndef NSEC_PER_MSEC
++#define NSEC_PER_MSEC 1000000ull
++#endif
++
+ mach_port_t mach_get_bs_port(char* bs_name) {
+   mach_port_name_t task = mach_task_self();
+ 
+@@ -49,6 +80,30 @@
+   }
+ }
+ 
++static mach_msg_return_t mach_send_bounded(struct mach_message* msg,
++                                             uint32_t budget_ms) {
++  uint64_t deadline = clock_gettime_nsec_np(CLOCK_MONOTONIC)
++                      + (uint64_t)budget_ms * NSEC_PER_MSEC;
++  mach_msg_timeout_t left = budget_ms;
++
++  for (;;) {
++    // always attempt at least once, so budget 0 still tries and then gives up
++    mach_msg_return_t ret = mach_msg(&msg->header,
++                                     MACH_SEND_MSG | MACH_SEND_TIMEOUT
++                                                   | MACH_SEND_INTERRUPT,
++                                     sizeof(struct mach_message),
++                                     0,
++                                     MACH_PORT_NULL,
++                                     left,
++                                     MACH_PORT_NULL);
++    if (ret != MACH_SEND_INTERRUPTED) return ret;
++
++    uint64_t now = clock_gettime_nsec_np(CLOCK_MONOTONIC);
++    if (now >= deadline) return MACH_SEND_TIMED_OUT;
++    left = (mach_msg_timeout_t)((deadline - now) / NSEC_PER_MSEC);
++  }
++}
++
+ char* mach_send_message(mach_port_t port, char* message, uint32_t len, bool await_response) {
+   if (!message || !port) return NULL;
+ 
+@@ -93,14 +148,31 @@
+   msg.descriptor.deallocate = false;
+   msg.descriptor.type = MACH_MSG_OOL_DESCRIPTOR;
+ 
+-  mach_msg(&msg.header,
+-           MACH_SEND_MSG,
+-           sizeof(struct mach_message),
+-           0,
+-           MACH_PORT_NULL,
+-           MACH_MSG_TIMEOUT_NONE,
+-           MACH_PORT_NULL             );
++  // await_response distinguishes the two callers cleanly:
++  //   false -> the bar pushing an event to a client (bar_item.c:169, the send
++  //            found parked in every single sample). Budget 0: one attempt,
++  //            then drop. A client that cannot accept a message is already
++  //            hopelessly backed up -- its queue is MACH_PORT_QLIMIT_LARGE --
++  //            and a dropped mouse event is cosmetic, redrawn by the next one.
++  //            This is what makes the deadlock structurally impossible: the bar
++  //            can no longer be stopped by a slow client, so it always returns
++  //            to its runloop, always drains commands, and always replies.
++  //   true  -> the `sketchybar` CLI / a client command, where briefly waiting
++  //            for the reply is the whole point. Bounded, never infinite.
++  mach_msg_return_t send_return =
++      mach_send_bounded(&msg, await_response ? MACH_SEND_TIMEOUT_MS : 0);
+ 
++  if (send_return != MACH_MSG_SUCCESS) {
++    // Nothing left this process: no rights were consumed and the OOL descriptor
++    // was never handed over (deallocate = false), so the only thing to undo is
++    // the response port that the await_response path below would have retired.
++    if (await_response) {
++      mach_port_mod_refs(task, response_port, MACH_PORT_RIGHT_RECEIVE, -1);
++      mach_port_deallocate(task, response_port);
++    }
++    return NULL;
++  }
++
+   if (await_response) {
+     struct mach_buffer buffer = { 0 };
+     mach_receive_message(response_port, &buffer, true);

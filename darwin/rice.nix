@@ -196,6 +196,50 @@ in
       width = 6.0;
     };
 
+    # ── The freeze fix: the bar must never block on its client ───────────────
+    # sketchybar and its Lua client talk over mach ports, and neither drains its
+    # own port while blocked in a send. So the two could end up sending to each
+    # other with nobody receiving, both parked in mach_msg2_trap at 0% CPU
+    # forever — a "frozen bar". Stacks sampled in the wild 2026-09-22 and
+    # 2026-09-24; in every sample the bar was stuck in the SAME send,
+    # bar_item.c:169 handing an event to the client.
+    #
+    # The fix that matters is that send: it now gets a zero budget — one attempt,
+    # then drop. A client too backed up to accept a message (its queue is
+    # MACH_PORT_QLIMIT_LARGE, 1024 deep) is already beyond saving, and a dropped
+    # mouse event is cosmetic. Because the bar can no longer be stopped by a slow
+    # client, it always returns to its runloop, always drains commands, and
+    # always replies — so the client's waits always resolve. That is what makes
+    # the deadlock structurally impossible rather than merely rare.
+    #
+    # Reply-expecting sends (the `sketchybar` CLI, client commands) keep a
+    # bounded 100ms deadline as a backstop that should now never be reached.
+    #
+    # CAREFUL: MACH_SEND_TIMEOUT alone does NOT bound a send. The library
+    # silently retries an interrupted send and REUSES the original timeout, so
+    # signals restart the clock forever — documented in the Mach Reference
+    # Manual (Message Send) and mis-shipped here once already, which cost a day.
+    # MACH_SEND_INTERRUPT plus our own deadline loop is the correct API use.
+    # `just test-mach` fails if that flag is ever dropped again.
+    #
+    # The SbarLua patch also releases two Lua registry refs it never released —
+    # every sbar.exec and sbar.delay callback was pinned forever (cpu alone execs
+    # every 5s). Unrelated to the freeze, but a real leak found alongside it.
+    #
+    # Patches are cut against the exact revisions nixpkgs pins — sketchybar
+    # v2.24.0 and SbarLua dba9cc42, both upstream HEAD as of 2026-09-24, so there
+    # is no newer release to move to. Drop these if upstream fixes its own sends.
+    nixpkgs.overlays = [
+      (_final: prev: {
+        sketchybar = prev.sketchybar.overrideAttrs (old: {
+          patches = (old.patches or [ ]) ++ [ ./patches/sketchybar-timed-mach-send.patch ];
+        });
+        sbarlua = prev.sbarlua.overrideAttrs (old: {
+          patches = (old.patches or [ ]) ++ [ ./patches/sbarlua-timed-mach-send.patch ];
+        });
+      })
+    ];
+
     # ── SketchyBar: SbarLua, palette-driven, aerospace-aware ─────────────────
     # Lua config in ./sketchybar (workspace pills with app-font glyphs, front
     # app, clock/battery/cpu). The rc bootstraps the Lua 5.5 interpreter with
