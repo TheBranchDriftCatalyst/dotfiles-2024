@@ -53,6 +53,37 @@
   "tui": "fullscreen",
   "theme": "dark",
   "agentPushNotifEnabled": true,
+  "autoMode": {
+    "soft_deny": [
+      "$defaults",
+      "Bash(rm:-rf *.env)"
+    ],
+    "environment": [
+      "### Org-wide",
+      "**Organization**: None configured",
+      "**Cloud provider(s)**: None configured",
+      "**Repository visibility**: private (TicketGuardian/protecht-platform, confirmed via gh)",
+      "**Internal sharing / snippet hosting**: None configured — treat public paste/gist services as outside the trust boundary",
+      "**Secrets management**: None configured",
+      "**Default / protected branches**: develop, main (protected); default branch feature/DEV-11015/simulator; ruleset \"PR Rules\" active on TicketGuardian/protecht-platform",
+      "**CI/CD deploy targets**: None configured",
+      "**Network posture**: None configured",
+      "**Source control**: TicketGuardian/protecht-platform (origin, github.com:TicketGuardian/protecht-platform.git) only — no additional orgs configured",
+      "**Trusted internal domains**: None configured",
+      "**Trusted cloud buckets**: None configured",
+      "**Key internal services**: None configured",
+      "**Internal package registry**: None configured",
+      "**Sensitive data locations & audiences**: .env / .env.example (Django SECRET_KEY, AWS credentials, Zendesk API token placeholders), protecht/core/models/mcp_credential.py, protecht/core/admin/mcp_credential.py, protecht/core/migrations/0187_add_mcp_credential.py, protecht/nota/migrations/0006_alter_subscription_webhook_secret.py — share only with audiences cleared at the named+specifics bar",
+      "**Data retention / declassification**: None configured",
+      "**Sensitive remote targets**: any namespace, host, or container whose name carries prod or production as a whole word or name segment",
+      "**Protected deployment namespaces / environments**: None configured — fall back to the Sensitive remote targets heuristic",
+      "**Protected IaC scopes**: IAM, RBAC, networking, quota, and node-pool resources; anything whose name or tag carries prod or production as a whole word or name segment",
+      "### User-specific",
+      "**Primary use of Claude Code**: software development",
+      "**Trusted repo**: /Users/dj/devspace/teak/worktrees/protecht-platform/temp-11943 (TicketGuardian/protecht-platform, private) and its origin remote — confidential material (non-secret) is fine here, but secrets and personal/regulated data are never cleared into the repo by visibility alone",
+      "**Org-specific CLIs**: None configured"
+    ]
+  },
   "git": {
     "includeCoAuthoredBy": false,
     "includeSessionTrailer": false
