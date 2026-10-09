@@ -17,6 +17,24 @@
 # it across the LAN by mDNS name — hence ollamaUrl is PER-HOST below rather
 # than a single baked-in string.
 #
+# ollama itself is DELIBERATELY NOT nix-managed (DJ's call, 2026-10-09): it is
+# a Homebrew install driven by a hand-written launchd agent at
+# ~/Library/LaunchAgents/com.ollama.server.plist, and that existing setup is
+# the one we use. Recording the contract this module depends on, since nothing
+# in the repo would otherwise tell you it exists:
+#
+#   OLLAMA_HOST=0.0.0.0:11434   the reason teakbookM5DJ can reach it at all;
+#                               without it the LAN ollamaUrl above is dead
+#   OLLAMA_KEEP_ALIVE=30m       how long a loaded model stays resident
+#   OLLAMA_MAX_LOADED_MODELS=3, OLLAMA_NUM_PARALLEL=4, OLLAMA_FLASH_ATTENTION=1
+#
+# Practical consequence of keep-alive, not a fault: the model below is 25GB, so
+# the FIRST request after 30 idle minutes spends ~6.5 min loading before a
+# single token appears (measured twice on 2026-10-09 — 387s by curl, and a
+# hermes run abandoned at 449s that was still loading). Everything inside the
+# keep-alive window is fast. If interactive snappiness matters more than this
+# model, `model` below is a one-line change and 17-18GB options are pulled.
+#
 # ── No 1Password block here, deliberately ───────────────────────────────
 # An earlier draft of this file carried
 #   settings.secrets.onepassword.env.OPENAI_API_KEY = "op://…";
