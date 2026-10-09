@@ -5,6 +5,33 @@ Random Operator Notes for AI Shortly
   - reminders, notes and fantastical calendar
   - ideally pull them from the current ones i have on my desktop
 
+## Handoff: catalyst jira_components, stranded (2026-10-09)
+
+`jira_components` was added to `dotfiles/catalyst/config.yaml` on 2026-10-09
+(commit 5b928bb) on the work machine, and on the SAME day another commit took
+that file out of the repo entirely and backed it with 1Password. So the routing
+config exists only in git history — it is NOT in any live `~/.catalyst/
+config.yaml`, and not in the per-host 1Password documents either.
+
+What it does: api-claim, playwright-tests and protecht-platform all share
+`jira_project: DEV`, so the project key alone cannot say which repo a ticket
+belongs to. Without components a DEV ticket is unroutable and `begin` silently
+falls back to `defaults.repo`. api-claim wants [Claims API, API-Claims];
+protecht-platform wants [Platform].
+
+To do, on the WORK machine (where the DEV repos actually live):
+
+    git show 5b928bb:dotfiles/catalyst/config.yaml   # the full file, with the comment
+
+Merge the two `jira_components:` blocks into `~/.catalyst/config.yaml`, then
+push that file to this host's 1Password document (see the op recipes in the
+justfile — the document is PER-HOST on purpose, so doing it from the wrong
+machine would overwrite the other machine's paths).
+
+Reference by SHA, never `origin/main:<path>` — once the rebased branch is
+pushed, HEAD no longer has the file and that path stops resolving. 5b928bb is
+an ancestor of HEAD, so the SHA keeps working.
+
 ## Handoff: Hermes Agent + ollama (2026-10-09)
 
 Added the `hermes-agent` flake (github:NousResearch/hermes-agent) and its
