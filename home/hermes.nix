@@ -89,6 +89,104 @@ in
       '';
     };
 
+    contextTokens = lib.mkOption {
+      type = lib.types.int;
+      # 64K is hermes' FLOOR, not a preference: agent/model_metadata.py sets
+      # MINIMUM_CONTEXT_LENGTH = 64_000 and refuses to start below it. 32768
+      # was tried first and rejected in 2.1s with exactly that message.
+      default = 65536;
+      description = ''
+        Context window to ask ollama for, as `model.ollama_num_ctx`.
+
+        THIS IS LOAD-BEARING, not tuning. Without it ollama loaded the 36B at
+        its native 262144-token window on 2026-10-09 and `ollama ps` reported:
+
+          SIZE 305 GB   PROCESSOR 63%/37% CPU/GPU   CONTEXT 262144
+
+        25.6GB of weights plus ~279GB of KV cache on a 128GB box, so most of
+        the model sat on the CPU and generation effectively never finished —
+        two runs were abandoned after 387s and 449s looking like a hang. It was
+        not a slow load; it was running off-GPU.
+
+        The window is NOT free to choose, though: hermes refuses to run below
+        64,000 tokens (MINIMUM_CONTEXT_LENGTH in agent/model_metadata.py). So
+        65536 is the smallest legal value, and the only real lever left for
+        memory is the MODEL. Scaling the observed 262144 figure linearly
+        suggests ~70GB of KV at 64K — about 95GB resident with weights, which
+        fits 128GB but leaves little room for a second model even though the
+        server allows OLLAMA_MAX_LOADED_MODELS=3.
+
+        Check `ollama ps` after changing this: SIZE should be well under 128GB
+        and PROCESSOR should read ~100% GPU. If a run ever goes back to
+        splitting onto the CPU, this is the first thing to look at — and the
+        fix then is a smaller model from `models`, not a smaller window.
+
+        Also written as `model.context_length` so hermes' own token budgeting
+        agrees with what it asked ollama for, which its runtime warning at
+        agent/conversation_loop.py explicitly tells you to do.
+      '';
+    };
+
+    models = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      description = ''
+        Short alias -> ollama tag, for every model this node already serves.
+
+        Rendered into config.yaml as `model_aliases`, which hermes checks
+        BEFORE catalog resolution — the mechanism its own source documents for
+        "endpoints outside the models.dev catalog (Ollama Cloud, local
+        servers)". That ordering is the point: these tags exist in no public
+        catalog, so without it hermes would pay a models.dev/OpenRouter probe
+        and still not resolve them.
+
+        Switch with `hermes -m <alias>`. Nothing is downloaded by listing one
+        here — every entry below was verified present in `ollama list` on
+        2026-10-09, and the set is the INTERSECTION of what is pulled with what
+        mac-sdlc-node's models.yaml declares, so dotfiles cannot drift into
+        naming a model the registry would delete (see the models:cleanup note
+        in the header). All 29 pulled models happened to be declared there.
+
+        base_url comes from ollamaUrl, so the aliases follow the per-host
+        endpoint: on the work machine they resolve across the LAN for free.
+
+        Not all of these are chat models — qwen3-embed-8b is an embedding
+        model, nuextract*/universalner are extraction models. They are listed
+        for completeness because they are served; do not expect conversation
+        from them.
+      '';
+      default = {
+        "behemoth-x" = "behemoth-x:Q4_K_M";
+        "cydonia-24b" = "hf.co/TheDrummer/Cydonia-24B-v4.3-GGUF:Q8_0";
+        "deepseek-r1" = "deepseek-r1:32b-qwen-distill-q8_0";
+        "devstral-2" = "hf.co/unsloth/Devstral-Small-2-24B-Instruct-2512-GGUF:Q8_0";
+        "devstral-2-123b" = "devstral-2:123b";
+        "gemma4" = "gemma4:e4b";
+        "gemma4-26b" = "gemma4:26b-a4b-it-q8_0";
+        "gemma4-31b" = "gemma4:31b";
+        "glm-4.6-air-distill" = "glm-4.6-air-distill:i1-Q6_K";
+        "granite4.2" = "granite4.2:30b";
+        "hermes-4-70b" = "hf.co/unsloth/Hermes-4-70B-GGUF:Q5_K_M";
+        "hermes-4.3-36b" = "hf.co/NousResearch/Hermes-4.3-36B-GGUF:Q5_K_M";
+        "magnum-v4" = "magnum-v4:Q5_K_M";
+        "nuextract1.5" = "nuextract1.5:latest";
+        "nuextract2" = "nuextract2:latest";
+        "phi4" = "phi4:14b-q8_0";
+        "qwen3-8b" = "qwen3:8b";
+        "qwen3-coder" = "qwen3-coder:30b-a3b-q8_0";
+        "qwen3-coder-next" = "qwen3-coder-next:Q8_0";
+        "qwen3-coder-opus" = "qwen3-coder-opus:Q8_0";
+        "qwen3-coder-opus-uncensored" = "qwen3-coder-opus-uncensored:Q8_0";
+        "qwen3-embed-8b" = "qwen3-embedding:8b";
+        "qwen3-moe-uncensored" = "qwen3-moe-uncensored:i1-Q6_K";
+        "qwen3-vl" = "qwen3-vl:latest";
+        "qwen3-vl-think" = "qwen3-vl:30b-a3b-thinking-q8_0";
+        "qwen3.6-opus" = "qwen3.6-opus:Q8_0";
+        "qwen3.8" = "qwen3.8:27b";
+        "qwen3.8-mlx" = "qwen3.8:27b-mlx";
+        "universalner" = "universalner:latest";
+      };
+    };
+
     model = lib.mkOption {
       type = lib.types.str;
       default = "hf.co/NousResearch/Hermes-4.3-36B-GGUF:Q5_K_M";
@@ -110,10 +208,25 @@ in
     services.hermes-agent = {
       enable = true;
 
-      settings.model = {
-        default = cfg.model;
-        provider = "ollama";
-        base_url = cfg.ollamaUrl;
+      settings = {
+        model = {
+          default = cfg.model;
+          provider = "ollama";
+          base_url = cfg.ollamaUrl;
+          # see contextTokens — this is what keeps the model on the GPU
+          ollama_num_ctx = cfg.contextTokens;
+          context_length = cfg.contextTokens;
+        };
+
+        # Every alias pins model+provider+base_url explicitly rather than
+        # inheriting. hermes' simpler `model.aliases` string form would take
+        # the provider from the active one, which silently breaks the moment
+        # the default is switched to anything non-local.
+        model_aliases = lib.mapAttrs (_alias: tag: {
+          model = tag;
+          provider = "ollama";
+          base_url = cfg.ollamaUrl;
+        }) cfg.models;
       };
 
       # Placeholder, not a secret — see the header. `environment` is upstream's
