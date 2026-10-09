@@ -39,11 +39,18 @@ let
   # CONTENT still installs per-machine on first use — same trade the catalyst
   # and beads marketplaces already make (see the header note above).
   ecc = {
-    # ARMED (DJ's call, 2026-10-08). The next `just switch` runs the official
-    # installer. Set back to false to stop reinstalling it; that does NOT
-    # uninstall — use `/plugin uninstall ecc@ecc` and revert the settings.json
-    # diff for that.
-    enable = true;
+    # DISARMED (DJ's call, 2026-10-09): hermes gets stood up and proven on its
+    # own first, and hermes is meant to use ECC eventually — so arming both in
+    # the same switch would mean debugging two new layers at once. Flip to true
+    # when hermes is working and the ECC layer is wanted; the next `just switch`
+    # then runs the official installer.
+    #
+    # false does NOT uninstall, and ECC is ALREADY installed on this machine by
+    # hand (settings.json enables ecc@ecc and the 2.2.3 plugin cache is on
+    # disk). This flag only governs whether activation reinstalls/updates it.
+    # To genuinely remove it: `/plugin uninstall ecc@ecc` plus reverting the
+    # settings.json diff.
+    enable = false;
     version = "2.2.3";
     scope = "user"; # user | project | local
     hooks = "minimal"; # off | minimal | standard | strict
