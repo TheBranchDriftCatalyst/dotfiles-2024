@@ -39,18 +39,24 @@ let
   # CONTENT still installs per-machine on first use — same trade the catalyst
   # and beads marketplaces already make (see the header note above).
   ecc = {
-    # DISARMED (DJ's call, 2026-10-09): hermes gets stood up and proven on its
-    # own first, and hermes is meant to use ECC eventually — so arming both in
-    # the same switch would mean debugging two new layers at once. Flip to true
-    # when hermes is working and the ECC layer is wanted; the next `just switch`
-    # then runs the official installer.
+    # ARMED (DJ's call, 2026-10-09). ECC is the layer being worked on; hermes
+    # gets layered onto it afterwards.
     #
-    # false does NOT uninstall, and ECC is ALREADY installed on this machine by
-    # hand (settings.json enables ecc@ecc and the 2.2.3 plugin cache is on
-    # disk). This flag only governs whether activation reinstalls/updates it.
-    # To genuinely remove it: `/plugin uninstall ecc@ecc` plus reverting the
-    # settings.json diff.
-    enable = false;
+    # Note what this flag does and does not do. ECC 2.2.3 is ALREADY installed
+    # and running on this machine from a manual install — settings.json enables
+    # ecc@ecc, the plugin is at plugins/cache/ecc/ecc/2.2.3, and all 24 of its
+    # hooks across 7 events are live (verified 2026-10-09 by driving each one
+    # through its own bootstrap). What is missing is only the declarative half:
+    # ~/.claude/.ecc-version is absent, so nix has never been the thing that
+    # installed it, and a fresh machine would not reproduce it.
+    #
+    # So the next activation reconciles rather than installs from nothing. The
+    # exact command it runs was dry-run first and reports "would-update":
+    #   npx ecc-universal@2.2.3 setup --mode claude-plugin --scope user \
+    #     --hooks minimal --yes --dry-run --json
+    # Setting this false again stops reinstalls but does NOT uninstall; that
+    # needs `/plugin uninstall ecc@ecc` plus reverting the settings.json diff.
+    enable = true;
     version = "2.2.3";
     scope = "user"; # user | project | local
     hooks = "minimal"; # off | minimal | standard | strict
