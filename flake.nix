@@ -49,6 +49,13 @@
       url = "github:nix-community/nix-vscode-extensions";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Hermes Agent CLI — ships its own homeManagerModules.default, which
+    # installs `hermes` + exports HERMES_HOME via home.sessionVariables (no
+    # zshrc editing, unlike its upstream installer script). No nixpkgs.follows:
+    # it builds its Python deps through uv2nix/pyproject-nix against its own
+    # pinned nixpkgs-unstable, and forcing a follow risks a lockfile mismatch.
+    hermes-agent.url = "github:NousResearch/hermes-agent";
   };
 
   outputs =
@@ -61,6 +68,7 @@
       treefmt-nix,
       mac-app-util,
       nix-vscode-extensions,
+      hermes-agent,
       ...
     }@inputs:
     let
@@ -109,6 +117,7 @@
                 ./home/darwin.nix
                 ./hosts/teakbookM5DJ/home.nix
                 nix-index-database.homeModules.nix-index
+                hermes-agent.homeManagerModules.default
               ];
               # Move aside any pre-existing file rather than failing activation.
               backupFileExtension = "hm-bak";
@@ -138,6 +147,7 @@
                 ./home/darwin.nix
                 ./hosts/catalystM5/home.nix
                 nix-index-database.homeModules.nix-index
+                hermes-agent.homeManagerModules.default
               ];
               # Move aside any pre-existing file rather than failing activation.
               backupFileExtension = "hm-bak";

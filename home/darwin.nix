@@ -33,6 +33,11 @@ in
     # Keyboard remapping. macOS-only by nature — the app is a system-extension
     # cask, declared in hosts/<host>/default.nix.
     ./karabiner.nix
+    # Hermes Agent CLI — its homeManagerModules.default is imported per-host
+    # in flake.nix (only on darwin), so this stays here and not in
+    # home/default.nix (shared with the Linux homeConfigurations, which don't
+    # import that module).
+    ./hermes.nix
   ];
 
   # Container runtime: colima (replaces Docker Desktop, which self-destructed
