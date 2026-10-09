@@ -22,6 +22,8 @@ let
   devspace = "${config.home.homeDirectory}/${cfg.root}";
   catalyst-cli = inputs.catalyst-cli.packages.${system}.default;
   repo = "${config.home.homeDirectory}/${dotfilesRepo}";
+  # The working copy whose ./bin/catalyst useLocalCatalystCLI points at.
+  localCheckout = "${devspace}/${cfg.localCatalystPath}";
 in
 {
   options.catalyst.devspace = {
@@ -35,12 +37,67 @@ in
       default = "catalyst";
       description = "org dir holding the personal-org repos (null = devspace root)";
     };
+
+    useLocalCatalystCLI = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Install the catalyst binary from your LOCAL checkout instead of the
+        flake input (which tracks origin/main).
+
+        This is a swap, never an overlay: with it on, the flake's package is
+        not installed at all, so only one catalyst binary exists and nothing
+        shadows anything. ~/bin/{catalyst,cy} become out-of-store symlinks to
+        <localCatalystPath>/bin/catalyst — the same live-symlink lane this
+        module already uses for config.yaml — so `task build` in that checkout
+        takes effect immediately, with no darwin-rebuild in the loop.
+
+        Completions and the fzf-tab widget keep coming from the flake input's
+        store path either way: they shell out to whichever `catalyst` is on
+        PATH, so they follow the swap for free and never go stale.
+
+        The cost is that your shell runs uncommitted code, and that a checkout
+        you have never built leaves the symlink dangling. Activation warns
+        about the second one; `task which` in the checkout reports both.
+      '';
+    };
+
+    localCatalystPath = lib.mkOption {
+      type = lib.types.str;
+      default = ".catalyst-cli";
+      description = "checkout used by useLocalCatalystCLI, relative to the devspace root";
+    };
   };
 
   config = {
     home.sessionVariables.DEV_SPACE_ROOT = devspace;
 
-    home.packages = [ catalyst-cli ];
+    # Exactly one catalyst binary, always. Local mode does not layer a symlink
+    # over the packaged build — it replaces it, so there is no shadow, no PATH
+    # ordering to get right, and no "which one am I running?".
+    home.packages = lib.optional (!cfg.useLocalCatalystCLI) catalyst-cli;
+
+    # Out-of-store symlinks: they resolve at USE time, so the binary tracks
+    # `task build` in the checkout. A store path would freeze whatever existed
+    # at switch time — the stale-binary trap this option exists to avoid.
+    home.file."bin/catalyst" = lib.mkIf cfg.useLocalCatalystCLI {
+      source = config.lib.file.mkOutOfStoreSymlink "${localCheckout}/bin/catalyst";
+    };
+    home.file."bin/cy" = lib.mkIf cfg.useLocalCatalystCLI {
+      source = config.lib.file.mkOutOfStoreSymlink "${localCheckout}/bin/catalyst";
+    };
+
+    # A never-built checkout leaves those links dangling, and a dangling
+    # catalyst is a confusing failure ("command not found" for a tool you can
+    # see in ~/bin). Say so at switch time, where it is still cheap to fix.
+    home.activation.catalystLocalCheck = lib.mkIf cfg.useLocalCatalystCLI (
+      lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        if [ ! -x "${localCheckout}/bin/catalyst" ]; then
+          echo "catalyst: ✖ useLocalCatalystCLI is on but ${localCheckout}/bin/catalyst is missing"
+          echo "catalyst:   run 'task build' in ${localCheckout} — ~/bin/catalyst dangles until you do"
+        fi
+      ''
+    );
 
     # Live symlink: catalyst writes config.yaml (repo add/set) THROUGH the
     # link into this repo — same lane as vscode/claude. Never a store path:

@@ -20,6 +20,7 @@
     ./ghostty.nix
     ./vscode.nix
     ./claude.nix
+    ./wakatime.nix
     ./cli.nix
   ];
 

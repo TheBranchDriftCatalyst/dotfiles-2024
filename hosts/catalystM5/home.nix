@@ -12,4 +12,8 @@ _:
   # values live in palette.nix (plain attrset) so rice.nix — a darwin-layer
   # module that can't see HM config — colors the bar/borders from the same file
   catalyst.palette = import ./palette.nix;
+
+  # wakatime: the label this box reports to the receiver — see the note in
+  # hosts/teakbookM5DJ/home.nix. Per-host, free-form, no DNS meaning.
+  catalyst.wakatime.machineName = "catalyst-personal";
 }
