@@ -25,4 +25,11 @@ _:
   # Free-form: rename it and the receiver follows on the next heartbeat (old
   # heartbeats keep the old name in history).
   catalyst.wakatime.machineName = "teakbook-work";
+
+  # hermes talks to the ollama on catalystM5 — this machine holds no weights.
+  # mDNS name, not an IP: both Macs move between networks, and a DHCP lease is
+  # not a stable address. Requires catalystM5 awake and on the same network;
+  # hermes fails per-request when it is not, which is the honest behaviour
+  # (nothing here can conjure a 25GB model onto the work laptop).
+  catalyst.hermes.ollamaUrl = "http://catalystM5.local:11434/v1";
 }
