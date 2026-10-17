@@ -23,6 +23,7 @@
     ./claude.nix
     ./wakatime.nix
     ./cli.nix
+    ./forge.nix
   ];
 
   home.username = lib.mkDefault "dj";
