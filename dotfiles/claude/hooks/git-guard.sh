@@ -44,10 +44,28 @@ if echo "$COMMAND" | grep -qE 'git commit'; then
   COMMIT_MSG=$(echo "$COMMAND" | grep -oP '(?<=-m\s["\x27]).*?(?=["\x27])' 2>/dev/null ||
     echo "$COMMAND" | sed -n 's/.*-m[[:space:]]*"\([^"]*\)".*/\1/p' 2>/dev/null)
 
-  # If we couldn't extract the message, fall back to checking only the git commit portion
+  # -F/--file: read the actual message out of the file.
+  #
+  # This is the common case for a long message, and the old fallback got it badly wrong:
+  # it scanned the WHOLE command string, paths included, so a message file living under a
+  # path containing "claude" — which every Claude Code scratchpad does — was blocked for
+  # "mentioning Claude" while the message itself was never looked at.
   if [ -z "$COMMIT_MSG" ]; then
-    COMMIT_MSG=$(echo "$COMMAND" | grep -o 'git commit.*')
+    MSG_FILE=$(echo "$COMMAND" |
+      grep -oE -- '(-F|--file)[[:space:]]*=?[[:space:]]*[^[:space:]]+' |
+      head -1 |
+      sed -E 's/^(-F|--file)[[:space:]]*=?[[:space:]]*//' |
+      tr -d '"'\''')
+    if [ -n "$MSG_FILE" ] && [ -r "$MSG_FILE" ]; then
+      COMMIT_MSG=$(cat "$MSG_FILE")
+    fi
   fi
+
+  # Still nothing means an editor-driven commit, --amend --no-edit, or a heredoc on stdin:
+  # the message is NOT on the command line, so there is nothing here to inspect. Scanning
+  # the command string instead is exactly what produced the false positives on file paths,
+  # and a missed check is better than blocking a correct commit over a word in a directory
+  # name. A commit-msg hook is the right place to catch those.
 
   # Check for Co-Authored-By in the commit message
   if echo "$COMMIT_MSG" | grep -qi 'co-authored-by'; then
