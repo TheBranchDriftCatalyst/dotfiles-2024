@@ -111,6 +111,17 @@ in
     ".claude/agents".source = live "agents";
     ".claude/commands".source = live "commands";
     ".claude/hooks".source = live "hooks";
+
+    # continuous-learning-v2's observer config. An out-of-store link is safe here
+    # where it was not for settings.json: this file is READ-ONLY to the plugin —
+    # observe.sh and start-observer.sh only ever json.load it, nothing writes it.
+    #
+    # It must live in the data dir rather than in the plugin tree. There are two
+    # byte-identical copies of that tree (plugins/marketplaces/ecc and
+    # plugins/cache/ecc/ecc/<ver>), both ship observer.enabled: false, and both are
+    # replaced on upgrade — so editing either works today and silently reverts
+    # later. Resolution order is $CLV2_CONFIG, then this path, then the tree.
+    ".local/share/ecc-homunculus/config.json".source = live "ecc-homunculus-config.json";
   };
 
   # Seed settings.json on a machine that has none. Deliberately NOT a
