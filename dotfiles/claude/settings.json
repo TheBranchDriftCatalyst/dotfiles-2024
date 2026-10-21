@@ -123,5 +123,9 @@
         "hook_profile": "standard"
       }
     }
+  },
+  "env": {
+    "ECC_OBSERVER_TIMEOUT_SECONDS": "300",
+    "ECC_OBSERVER_MAX_ANALYSIS_LINES": "250"
   }
 }
