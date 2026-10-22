@@ -28,7 +28,7 @@
 
             # frontend
             nodejs_22
-            pnpm
+            yarn
 
             # local k8s dev loop
             tilt

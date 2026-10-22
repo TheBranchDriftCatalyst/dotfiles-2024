@@ -116,6 +116,7 @@
     "includeSessionTrailer": false
   },
   "includeCoAuthoredBy": false,
+  "effortLevel": "high",
   "pluginConfigs": {
     "ecc@ecc": {
       "options": {
