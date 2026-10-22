@@ -220,18 +220,25 @@ The memory service does NOT need re-indexing — it accumulates over time and co
 
 Configured in `~/.claude/settings.json` under `hooks`:
 
-| Event        | Matcher | Hook                                   | Purpose                                                  |
-| ------------ | ------- | -------------------------------------- | -------------------------------------------------------- |
-| SessionStart | startup | `bd prime`                             | Load beads issue tracker context                         |
-| SessionStart | startup | `memory status`                        | Show memory service health                               |
-| SessionStart | startup | `codebase-memory-mcp list-projects`    | Show indexed codebases                                   |
-| SessionStart | resume  | `bd prime`                             | Re-inject beads on resume                                |
-| SessionStart | compact | `bd prime` + `post-compact-context.sh` | Recover context after compaction                         |
-| PreCompact   | —       | `bd prime` + `pre-compact.sh`          | Preserve context + instruct memory saving                |
-| PreToolUse   | Bash    | `git-guard.sh`                         | Block destructive git ops + no AI attribution in commits |
-| Stop         | —       | macOS notification                     | Notify when Claude finishes                              |
+| Event      | Matcher | Hook                      | Purpose                                                  |
+| ---------- | ------- | ------------------------- | -------------------------------------------------------- |
+| PreToolUse | Bash    | `git-guard.sh`            | Block destructive git ops + no AI attribution in commits |
+| Stop       | —       | `claude-settings-sync.sh` | Absorb app-side settings into the repo (being removed)   |
 
-Hook scripts live at `~/.claude/hooks/`.
+`git-guard.sh` is owned by the **catalyst-meta plugin**
+(`catalyst-agentic-sdlc`), where it ships with its own test suite
+(`plugins/catalyst-meta/test/git-guard/run.sh`, 89 assertions, gated by
+lefthook). `statusline.sh` stays in this repo because `statusLine` must be set
+in a settings file — a plugin's `settings` key honors only `agent` and
+`subagentStatusLine`.
+
+`pre-compact.sh`, `post-compact-context.sh` and `workstream-briefing.sh` were
+duplicated here and in the plugin; the plugin's copies are now the only ones.
+They remain PARKED — they need the beads/memory-service MCPs.
+
+Rows for `memory status` and `codebase-memory-mcp list-projects` used to appear
+here but were never wired in `settings.json`. The Stop row is next to go, since
+`claude-settings-sync.sh` is being replaced by managed settings.
 
 ## Workstream Briefing (Session Start Behavior)
 

@@ -235,6 +235,17 @@ test-direnv-installed:
 test-sketchybar:
     ./test/sketchybar/run.sh
 
+# The PreToolUse guard that blocks destructive git ops. Pure stdin/exit-code
+# assertions, no git repo touched — sub-second. Every case in it is a bypass
+# found in the 2026-10-22 audit, so this is the gate for anything under
+# dotfiles/claude/hooks/.
+test-git-guard:
+    ./test/git-guard/run.sh
+
+# Same suite against what is actually installed at ~/.claude/hooks.
+test-git-guard-installed:
+    ./test/git-guard/run.sh ~/.claude/hooks/git-guard.sh
+
 # The mach send contract both IPC patches depend on. A send timeout ALONE does
 # NOT bound a send — the library retries on interrupt and reuses the original
 # timeout — which is exactly the bug that shipped once already. Fails loudly if
