@@ -1,0 +1,3 @@
+[submodule "examples/git-repo-template"]
+	path = examples/git-repo-template
+	url = git@github.com:TheBranchDriftCatalyst/git-repo-template.git
