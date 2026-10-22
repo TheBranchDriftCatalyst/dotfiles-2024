@@ -220,15 +220,16 @@ The memory service does NOT need re-indexing — it accumulates over time and co
 
 Configured in `~/.claude/settings.json` under `hooks`:
 
-| Event      | Matcher | Hook                      | Purpose                                                  |
-| ---------- | ------- | ------------------------- | -------------------------------------------------------- |
-| PreToolUse | Bash    | `git-guard.sh`            | Block destructive git ops + no AI attribution in commits |
-| Stop       | —       | `claude-settings-sync.sh` | Absorb app-side settings into the repo (being removed)   |
+Only one hook is wired in `settings.json` now:
 
-`git-guard.sh` is owned by the **catalyst-meta plugin**
-(`catalyst-agentic-sdlc`), where it ships with its own test suite
-(`plugins/catalyst-meta/test/git-guard/run.sh`, 89 assertions, gated by
-lefthook). `statusline.sh` stays in this repo because `statusLine` must be set
+| Event | Matcher | Hook                      | Purpose                                                |
+| ----- | ------- | ------------------------- | ------------------------------------------------------ |
+| Stop  | —       | `claude-settings-sync.sh` | Absorb app-side settings into the repo (being removed) |
+
+`git-guard.sh` is no longer here at all. It is owned by the **catalyst-meta
+plugin** (`catalyst-agentic-sdlc` v0.3.0+), which wires it as `PreToolUse` /
+`Bash` from its own manifest and ships it with a 89-assertion suite gated by
+lefthook. `statusline.sh` stays in this repo because `statusLine` must be set
 in a settings file — a plugin's `settings` key honors only `agent` and
 `subagentStatusLine`.
 

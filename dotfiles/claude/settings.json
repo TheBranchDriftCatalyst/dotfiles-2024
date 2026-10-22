@@ -4,17 +4,6 @@
     "ECC_OBSERVER_MAX_ANALYSIS_LINES": "250"
   },
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$HOME/.claude/hooks/git-guard.sh"
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "matcher": "",

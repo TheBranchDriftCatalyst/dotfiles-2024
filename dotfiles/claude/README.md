@@ -135,7 +135,7 @@ places, they will drift, and you will debug the stale one.
 
 | Item | State |
 |---|---|
-| `git-guard.sh` + its test suite | Moved into `catalyst-meta`. The copy here is **pending deletion** — it must not go until the new plugin version is actually installed, or the stale cached copy becomes the only guard. |
+| `git-guard.sh` + its test suite | **Done.** Lives only in `catalyst-meta` as of `catalyst-agentic-sdlc` v0.3.0, with its 89-assertion suite gated by lefthook there. Removed from this repo along with the `hooks.PreToolUse` entry in both settings files; verified that exactly one guard fires. |
 | `pre-compact.sh`, `post-compact-context.sh`, `workstream-briefing.sh`, `HOOKS-LIFECYCLE.md` | Deleted here; the plugin's copies are now the only ones. Still PARKED (they need the beads/memory-service MCPs). |
 | `settings.json` | **Pending deletion.** Declarative keys move to `claude/policy.nix`; churn keys become untracked app state. |
 | `claude-settings-sync.sh` + its `Stop` hook | **Pending deletion**, replaced by managed settings. |
