@@ -105,6 +105,7 @@
     nix-output-monitor
     nh # nicer switch UX + `nh clean` GC — justfile `switch` uses it
     beads # bd — issue tracker the claude plugins + catalyst beads.dir expect
+    nodejs # the ecc Claude plugin's hooks shell out to `node -e`
 
     # ── fonts (these do NOT need a Homebrew cask) ────────────────────────
     nerd-fonts.hack
