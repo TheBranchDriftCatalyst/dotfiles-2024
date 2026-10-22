@@ -3,9 +3,10 @@
 # Lives apart from zsh.nix because direnv itself isn't zsh: .envrc evaluates
 # in bash, and its helper library (./direnv/lib/onepassword.sh) wants to be a
 # real bash file — IDE-highlighted, shellcheck'd, testable — rather than a
-# nix string. The zsh-side conveniences (op_cleanup, the _direnv_hook noise
-# filter) are real files too, ./direnv/zsh-hooks.zsh, for the editor/zsh -n
-# half of that same contract even though shellcheck itself can't read zsh.
+# nix string. The zsh-side conveniences (op_cleanup/op_rotate, the
+# _direnv_hook noise filter) are real files too, ./direnv/zsh-hooks.zsh, for
+# the editor/zsh -n half of that same contract even though shellcheck itself
+# can't read zsh.
 { config, lib, ... }:
 
 let
@@ -56,7 +57,7 @@ in
   # colour codes prepended ahead of the repo file's own content.
   xdg.configFile."direnv/lib/onepassword.sh".text = livery + builtins.readFile ./direnv/lib/onepassword.sh;
 
-  # op_cleanup + the _direnv_hook noise filter: a real file
+  # op_cleanup/op_rotate + the _direnv_hook noise filter: a real file
   # (./direnv/zsh-hooks.zsh), not a nix string — shellcheck has no zsh
   # dialect, but an editor and `zsh -n` can still read it directly, and it's
   # free of nix's ''${...} interpolation-escaping noise.

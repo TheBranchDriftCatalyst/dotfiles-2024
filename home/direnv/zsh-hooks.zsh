@@ -4,10 +4,14 @@
 # so an editor and `zsh -n` can read it: shellcheck itself has no zsh
 # dialect (bash/dash/ksh/sh only), so unlike onepassword.sh this doesn't get
 # shellcheck — syntax-checked in test/direnv/run.sh instead.
+#
+#   op_cleanup   clear the cache + every tracked output; no reload
+#   op_rotate    op_cleanup, then force a fresh render right now
 
 # Renders in .direnv/op/ are keyed on a content watermark, so a secret
-# rotated behind an unchanged input stays cached. This is the invalidation
-# for that — run it after rotating anything. One pattern backs all three
+# rotated behind an unchanged input stays cached. op_rotate is the
+# invalidation for that — run it right after rotating anything. One
+# pattern backs all three
 # 1Password helpers (home/direnv/lib/onepassword.sh): in-folder cache files
 # (use_onepassword's own .env) are wiped with the directory; out-of-folder
 # rendered files (use_onepassword_tpl/_file's .npmrc, a materialized
@@ -33,7 +37,30 @@ op_cleanup() {
   # No reload here, deliberately: direnv doesn't notice .direnv/op/ changing
   # on its own (it only re-evaluates on cd, a watched-file change, or an
   # explicit `direnv reload`/`direnv allow`), so a tracked output stays
-  # GONE — not re-rendered — until you trigger that yourself.
+  # GONE — not re-rendered — until you trigger that yourself. op_rotate,
+  # below, is that trigger.
+}
+
+# op_rotate — op_cleanup, then force the fresh render it alone no longer
+# does. Use this right after actually rotating a secret in 1Password, when
+# you want the new value loaded NOW instead of on the next cd.
+#
+# `direnv allow` is NOT needed here: it grants permission to load an
+# .envrc whose CONTENT changed (a new hash) — nothing about .envrc itself
+# changes when its cache underneath it is cleared, so the directory is
+# already allowed. `direnv reload` is the documented call for exactly
+# this — forcing a re-evaluation of an unchanged, already-allowed .envrc —
+# and it is a safe no-op (exit 0, no error) outside an active direnv
+# session too, so calling it from a shell that never `cd`ed into a direnv
+# directory never breaks anything.
+op_rotate() {
+  op_cleanup || return 1
+  # Not `[[ -f .envrc ]] && direnv reload` as the last statement: a function
+  # returns its last command's exit status, and that test is FALSE (no
+  # .envrc here) exactly when skipping the reload is the correct, successful
+  # thing to do — this must not read as op_rotate having failed.
+  [[ -f .envrc ]] && direnv reload
+  return 0
 }
 
 # `use flake` makes direnv announce ~120 changed nix vars on every cd,

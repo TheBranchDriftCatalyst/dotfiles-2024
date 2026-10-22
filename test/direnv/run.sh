@@ -498,8 +498,34 @@ use_onepassword_file op://dev/connect/credentials.json secrets/connect.json'
   new_project cleanup-empty
   CLEANUP_EMPTY_OUT="$(cd "$PROJ" && PATH="$PATH_WITH_OP" zsh -c "source \"$OP_CLEANUP_SRC\"; op_cleanup" 2>&1)"
   assert_contains "nothing cached is reported, not an error" "nothing cached" "$CLEANUP_EMPTY_OUT"
+
+  echo "══ 13b. op_rotate — op_cleanup, then a reload op_cleanup alone no longer does ══"
+  new_project rotate 'use_onepassword
+use_onepassword_tpl .npmrc.tpl
+use_onepassword_file op://dev/connect/credentials.json secrets/connect.json'
+  printf '_authToken=op://dev/shared/npm-registry-token\n' >"$PROJ/.npmrc.tpl"
+  run "$PATH_WITH_OP"
+  assert_contains "fixture: .npmrc rendered" "_authToken=s3cr3t" "$(cat "$PROJ/.npmrc" 2>/dev/null)"
+
+  ROTATE_OUT="$(cd "$PROJ" && PATH="$PATH_WITH_OP" zsh -c "source \"$OP_CLEANUP_SRC\"; op_rotate" 2>&1)"
+  ROTATE_EXIT=$?
+
+  assert_eq "op_rotate exits clean (the reload call never errors)" "0" "$ROTATE_EXIT"
+  assert_eq "op/ cache directory removed, same as op_cleanup" "" "$(ls_glob "$PROJ"/.direnv/op)"
+  assert_eq ".npmrc removed too" "" "$(ls_glob "$PROJ"/.npmrc)"
+  assert_eq "secrets/connect.json removed too" "" "$(ls_glob "$PROJ"/secrets/connect.json)"
+  assert_contains "reports what op_cleanup cleared" "cleared" "$ROTATE_OUT"
+
+  # direnv reload with no .envrc in $PWD: op_rotate must skip the call
+  # outright rather than hand direnv a directory it was never pointed at.
+  NO_ENVRC_DIR="$ROOT/no-envrc"
+  mkdir -p "$NO_ENVRC_DIR"
+  ROTATE_NO_ENVRC_OUT="$(cd "$NO_ENVRC_DIR" && PATH="$PATH_WITH_OP" zsh -c "source \"$OP_CLEANUP_SRC\"; op_rotate" 2>&1)"
+  ROTATE_NO_ENVRC_EXIT=$?
+  assert_eq "no .envrc: still exits clean" "0" "$ROTATE_NO_ENVRC_EXIT"
+  assert_contains "no .envrc: op_cleanup's own report still fires" "nothing cached" "$ROTATE_NO_ENVRC_OUT"
 else
-  echo "zsh not on PATH — skipping op_cleanup tests" >&2
+  echo "zsh not on PATH — skipping op_cleanup/op_rotate tests" >&2
 fi
 
 echo "══ 14. concurrency: parallel entries never source a half-written cache ══"

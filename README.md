@@ -191,9 +191,11 @@ catches a secret rotated behind an *otherwise-unchanged* template.
 is the only copy, so there's nothing to silently rotate behind. Artifacts
 that live outside `.direnv/op/` (a rendered `.npmrc`, a materialized
 kubeconfig) get an extra line in `.direnv/op/.manifest`, which is what lets
-`op_cleanup` (zsh function, `home/direnv.nix`) remove them too, not just its
-own cache internals — run it after rotating anything, and everything a
-1Password helper wrote gets re-rendered fresh on the next shell.
+`op_cleanup` (zsh function, `home/direnv/zsh-hooks.zsh`) remove them too, not
+just its own cache internals. `op_cleanup` alone does not reload — a tracked
+output stays gone until the next `cd` or an explicit `direnv reload`; run
+`op_rotate` instead (same cleanup, plus that reload) right after actually
+rotating a secret, to pick up the new value immediately.
 
 ## Status
 
