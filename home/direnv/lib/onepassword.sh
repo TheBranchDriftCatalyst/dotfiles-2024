@@ -2,7 +2,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # onepassword.sh :: direnv helpers — installed to ~/.config/direnv/lib/
 #
-#   use_onepassword      [tpl]              op:// refs in tpl → exported env
+#   use_onepassword      [tpl]               op:// refs in tpl → exported env
 #   use_onepassword_file <op://ref> <dest>   one secret/document → a real file
 #   use_onepassword_tpl  tpl [out] [mode]    whole template → a real file
 #
@@ -36,15 +36,25 @@
 #     forced red that overrides anything we set. A printf builtin owns the
 #     whole line and costs no process.
 #
-# Caching: renders live in $(direnv_layout_dir)/op/ (usually .direnv/op/),
-# one <template-slug>.hash (+ .env, for use_onepassword) pair per template,
-# so two templates in the same project both stay warm. A render is reused
-# while the template's CONTENT is unchanged (sha256, not mtime — a `touch`
-# or a checkout with a new mtime but old bytes is not a cache miss) and the
-# render is younger than $OP_ENV_CACHE_TTL_MINUTES (default 480 = 8h; 0
-# disables caching entirely). The hash catches an edited ref immediately;
-# the clock catches a secret ROTATED behind an unchanged template. Bust by
-# hand with `op_cleanup` (home/direnv.nix) or `rm -rf .direnv/op`.
+# Caching: ONE pattern backs all three hooks. Each tracks a "watermark" —
+# sha256 of the INPUT (a template's bytes for use_onepassword/_tpl; the
+# op://ref STRING itself for use_onepassword_file, which has no template
+# file to hash) — at $(direnv_layout_dir)/op/<key>.hash, where <key> is the
+# slugified input. A watermark match means the ARTIFACT (wherever it lives)
+# is current; it is NOT re-rendered. This is true whether the artifact sits
+# inside that same op/ directory (use_onepassword's own .env cache) or
+# anywhere else in the project (use_onepassword_tpl/_file's .npmrc, a
+# materialized kubeconfig, …) — an out-of-folder artifact is additionally
+# recorded in op/.manifest, which is how `op_cleanup` (home/direnv.nix) finds
+# and removes it too, not just the folder's own cache internals.
+#
+# use_onepassword layers a SECOND check on top of the watermark:
+# $OP_ENV_CACHE_TTL_MINUTES (default 480 = 8h; 0 disables caching entirely).
+# A hit needs BOTH — watermark match AND not stale-by-TTL. The watermark
+# catches an edited ref immediately; the clock catches a secret ROTATED
+# behind an unchanged template. use_onepassword_tpl/_file have no TTL layer —
+# the artifact IS the only copy, so there is nothing to silently rotate
+# behind; delete it, or run `op_cleanup`, to force a re-render.
 #
 # $_OP_* colours/glyphs come from home/direnv.nix (catalyst.palette), and are
 # blank by default below so this file is self-contained under direct test.
@@ -76,6 +86,8 @@ _op_tip() {
 
 _op_count() { grep -c '^[A-Za-z_][A-Za-z0-9_]*=' "$1" 2>/dev/null || true; }
 _op_fingerprint() { shasum -a 256 <"$1" | cut -d' ' -f1; }
+# For inputs with no file to hash — an op://ref string, not a template.
+_op_fingerprint_str() { printf '%s' "$1" | shasum -a 256 | cut -d' ' -f1; }
 
 # _op_stale <file> <ttl-minutes> — true iff <file> is older than the TTL.
 # `date -r FILE` means "use FILE's mtime" on both BSD and GNU date; `stat`
@@ -87,8 +99,9 @@ _op_stale() {
   ((age >= ttl_min * 60))
 }
 
-# Cache files are named for their template, slashes flattened: readable, and
-# stable across edits so a render overwrites rather than orphans.
+# Cache keys are slugified inputs — a template path or an op://ref string,
+# slashes flattened so both read as one path segment: readable, and stable
+# across edits so a render overwrites rather than orphans.
 _op_slug() { printf '%s' "${1//\//%}"; }
 
 _op_cache_dir() {
@@ -125,6 +138,44 @@ _op_gitignored() {
     *) return 0 ;; # outside the work tree
   esac
   git check-ignore -q -- "$abs" 2>/dev/null
+}
+
+# ── unified watermark cache ──────────────────────────────────────────────────
+# See the caching note up top. These three are the whole pattern; every
+# use_* hook below is just "check, do the real work, commit".
+
+# _op_cache_hit <dir> <key> <watermark> <artifact> [ttl-minutes]
+# ttl omitted/0 => hash match alone is a hit (use_onepassword_tpl/_file: the
+# artifact is the only copy, nothing to silently rotate behind). ttl>0 also
+# requires the artifact be younger than it (use_onepassword's rotation
+# guard, layered ON TOP of the watermark check, not instead of it).
+_op_cache_hit() {
+  local dir="$1" key="$2" wm="$3" artifact="$4" ttl="${5:-0}" stored
+  [[ -f "$artifact" ]] || return 1
+  stored="$(cat "$dir/$key.hash" 2>/dev/null)"
+  [[ -n "$stored" && "$stored" == "$wm" ]] || return 1
+  ((ttl > 0)) && _op_stale "$artifact" "$ttl" && return 1
+  return 0
+}
+
+# _op_cache_commit <dir> <key> <watermark> <artifact> — call ONLY once the
+# artifact has actually been written. An artifact already inside $dir (e.g.
+# use_onepassword's own .env cache) needs no manifest entry: `op_cleanup`
+# wipes the whole directory anyway. Anywhere else, it's tracked so cleanup
+# can still find and remove it.
+_op_cache_commit() {
+  local dir="$1" key="$2" wm="$3" artifact="$4"
+  printf '%s\n' "$wm" >"$dir/$key.hash"
+  case "$artifact" in
+    "$dir"/*) ;;
+    *) _op_track "$dir" "$(_op_realpath "$artifact")" ;;
+  esac
+}
+
+# _op_track <dir> <absolute-path> — append-dedup into the cleanup manifest.
+_op_track() {
+  local dir="$1" path="$2" manifest="$1/.manifest"
+  grep -qxF -- "$path" "$manifest" 2>/dev/null || printf '%s\n' "$path" >>"$manifest"
 }
 
 # ── failure state, per direnv load ──────────────────────────────────────────
@@ -252,7 +303,7 @@ _op_render() {
 # .direnv/ is gitignored (checked below, not just assumed), so the trade
 # buys a usable prompt-free shell.
 use_onepassword() {
-  local tpl="${1:-.env.tpl}" dir base rendered fp ttl auth dotenv_out
+  local tpl="${1:-.env.tpl}" dir key rendered wm ttl auth dotenv_out staged
   if [[ ! -f "$tpl" ]]; then
     _op_bad "$tpl" "no such template in $PWD · skipped"
     return 0
@@ -271,9 +322,9 @@ use_onepassword() {
     return 0
   fi
 
-  base="$dir/$(_op_slug "$tpl")"
-  rendered="$base.env"
-  fp="$(_op_fingerprint "$tpl")"
+  key="$(_op_slug "$tpl")"
+  rendered="$dir/$key.env"
+  wm="$(_op_fingerprint "$tpl")"
 
   ttl="${OP_ENV_CACHE_TTL_MINUTES:-480}"
   if [[ ! "$ttl" =~ ^[0-9]+$ ]]; then
@@ -283,12 +334,10 @@ use_onepassword() {
 
   # Not the stdlib dotenv(): it watch_files its input, and watching a file
   # under .direnv reloads direnv on every prompt. $tpl is the right trigger.
-  # Parsed (not just hash-checked) before being declared a hit: a cache that
-  # matches by content but fails to parse must fall through, not export
+  # Parsed (not just watermark-checked) before being declared a hit: a cache
+  # that matches by content but fails to parse must fall through, not export
   # nothing while claiming success.
-  if ((ttl > 0)) && [[ -f "$rendered" ]] \
-    && [[ "$fp" == "$(cat "$base.hash" 2>/dev/null)" ]] \
-    && ! _op_stale "$rendered" "$ttl" \
+  if ((ttl > 0)) && _op_cache_hit "$dir" "$key" "$wm" "$rendered" "$ttl" \
     && dotenv_out="$("${direnv:-direnv}" dotenv bash "$rendered" 2>/dev/null)"; then
     _op_ok "$tpl" "$_OP_NUM$(_op_count "$rendered")$_OP_DIM secret(s) · cached"
     eval "$dotenv_out"
@@ -310,11 +359,11 @@ use_onepassword() {
   # Staged, not rendered straight to $rendered: a new render that fails to
   # parse must leave any existing good cache alone rather than clobber it.
   auth="$(_op_auth_mode)"
-  local staged="$base.new"
+  staged="$dir/$key.new"
   if _op_render "$tpl" "$staged"; then
     if dotenv_out="$("${direnv:-direnv}" dotenv bash "$staged" 2>/dev/null)"; then
       mv -f "$staged" "$rendered"
-      printf '%s\n' "$fp" >"$base.hash" # only after a render that also parses
+      _op_cache_commit "$dir" "$key" "$wm" "$rendered" # only after a render that also parses
       _op_ok "$tpl" "$_OP_NUM$(_op_count "$rendered")$_OP_DIM secret(s) · $auth"
       eval "$dotenv_out"
       return 0
@@ -334,20 +383,16 @@ use_onepassword() {
 # keypair, a kubeconfig. The env-var half of the pattern is use_onepassword
 # above; the whole-TEMPLATE file half is use_onepassword_tpl below.
 #
-# Cached by design: an existing non-empty $dest is left alone, so entering the
-# repo costs nothing after the first time. Delete the file to re-fetch. Same
-# soft-fail contract as use_onepassword — a missing/locked op warns, it never
-# breaks the shell.
+# Cached like the other two: the watermark here is the op://ref STRING
+# itself (there is no template file to hash), so changing the ref re-fetches
+# even if $dest still exists. Same soft-fail contract as use_onepassword — a
+# missing/locked op warns, it never breaks the shell.
 use_onepassword_file() {
   local ref="${1:-}" dest="${2:-}"
-  local dir tmp err auth
+  local dir cachedir key wm tmp err auth
 
   if [[ -z $ref || -z $dest ]]; then
     _op_bad "use_onepassword_file" "usage: use_onepassword_file <op://vault/item/field> <dest>"
-    return 0
-  fi
-  # -s not -f: a 0-byte dest is a failed earlier fetch, not a cache hit.
-  if [[ -s $dest ]]; then
     return 0
   fi
 
@@ -355,6 +400,18 @@ use_onepassword_file() {
   # commit. Add it to .gitignore or render outside the repo.
   if ! _op_gitignored "$dest"; then
     _op_bad "$ref" "refusing to materialize secrets to $dest · in this repo and NOT gitignored"
+    return 0
+  fi
+
+  cachedir="$(_op_cache_dir)" || {
+    _op_bad "$ref" "$dest NOT materialized · cannot create $(direnv_layout_dir)/op"
+    return 0
+  }
+  key="$(_op_slug "$ref")"
+  wm="$(_op_fingerprint_str "$ref")"
+
+  # -s not -f: a 0-byte dest is a failed earlier fetch, not a cache hit.
+  if [[ -s $dest ]] && _op_cache_hit "$cachedir" "$key" "$wm" "$dest"; then
     return 0
   fi
 
@@ -392,13 +449,14 @@ use_onepassword_file() {
   # whether to overwrite — an invisible prompt that would hang direnv.
   if err="$(op read "$ref" --out-file "$tmp" --force 2>&1 >/dev/null)"; then
     # An empty read is a failure with a zero exit status: installing it would
-    # poison the "$dest exists" cache check on every future entry.
+    # poison the cache-hit check on every future entry.
     if [[ ! -s $tmp ]]; then
       rm -f "$tmp"
       _op_bad "$ref" "$dest NOT materialized · read back empty"
       return 0
     fi
     if chmod 600 "$tmp" && mv -f "$tmp" "$dest"; then
+      _op_cache_commit "$cachedir" "$key" "$wm" "$dest"
       _op_ok "$ref" "→ $dest · $auth"
       return 0
     fi
@@ -417,11 +475,11 @@ use_onepassword_file() {
 # tools that take no env var for a secret (npm/pnpm's registry token, a
 # kubeconfig assembled from vaulted cluster creds). Exports nothing — point
 # the tool at $out yourself (NPM_CONFIG_USERCONFIG, KUBECONFIG, …), which
-# keeps this usable for fixed-path readers too. Same content-hash cache as
+# keeps this usable for fixed-path readers too. Same watermark cache as
 # use_onepassword, no TTL (the output file itself is the only copy — delete
 # it, or run op_cleanup, to force a re-render).
 use_onepassword_tpl() {
-  local tpl="${1:-}" out="${2:-}" mode="${3:-600}" dir base fp auth
+  local tpl="${1:-}" out="${2:-}" mode="${3:-600}" dir key wm auth
   if [[ -z "$tpl" ]]; then
     _op_bad "use_onepassword_tpl" "usage: use_onepassword_tpl <template> [output] [mode]"
     return 0
@@ -450,11 +508,10 @@ use_onepassword_tpl() {
     _op_gave_up "$tpl" "$out" "cannot create $(direnv_layout_dir)/op"
     return 0
   }
-  base="$dir/$(_op_slug "$tpl")"
-  fp="$(_op_fingerprint "$tpl")"
+  key="$(_op_slug "$tpl")"
+  wm="$(_op_fingerprint "$tpl")"
 
-  # $out is the artifact; the fingerprint says which template it came from.
-  if [[ -f "$out" && "$fp" == "$(cat "$base.hash" 2>/dev/null)" ]]; then
+  if _op_cache_hit "$dir" "$key" "$wm" "$out"; then
     _op_ok "$tpl" "$out · current"
     return 0
   fi
@@ -470,7 +527,7 @@ use_onepassword_tpl() {
 
   auth="$(_op_auth_mode)"
   if _op_render "$tpl" "$out" "$mode"; then
-    printf '%s\n' "$fp" >"$base.hash"
+    _op_cache_commit "$dir" "$key" "$wm" "$out"
     _op_ok "$tpl" "→ $out $_OP_NUM(0$mode)$_OP_DIM · $auth"
   else
     _op_gave_up "$tpl" "$out" "$_OP_ERR"

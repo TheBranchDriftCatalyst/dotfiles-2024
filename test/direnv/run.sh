@@ -358,6 +358,7 @@ run "$PATH_WITH_OP"
 assert_contains "file materialized" "BEGIN FAKE KEY" "$(cat "$PROJ/secrets/connect.json" 2>/dev/null)"
 assert_eq "file is 0600" "-rw-------" "$(perms_of "$PROJ/secrets/connect.json")"
 assert_eq "op invoked once" "1" "$(op_calls)"
+assert_contains "tracked in the cleanup manifest" "$PROJ/secrets/connect.json" "$(cat "$PROJ/.direnv/op/.manifest" 2>/dev/null)"
 reset_calls
 run "$PATH_WITH_OP"
 assert_eq "existing file is a cache hit" "0" "$(op_calls)"
@@ -367,6 +368,21 @@ reset_calls
 run "$PATH_WITH_OP"
 assert_eq "a 0-byte file is NOT a cache hit" "1" "$(op_calls)"
 assert_contains "and is refilled" "BEGIN FAKE KEY" "$(cat "$PROJ/secrets/connect.json")"
+
+# the watermark is the REF, not just "$dest exists" — a changed ref to the
+# SAME dest must re-fetch, which the old exists-non-empty-only check couldn't
+# detect at all.
+new_project files-ref-changed 'use_onepassword_file op://dev/connect/credentials.json secrets/connect.json'
+reset_calls
+run "$PATH_WITH_OP"
+reset_calls
+run "$PATH_WITH_OP"
+assert_eq "same ref, same dest: still a cache hit" "0" "$(op_calls)"
+printf '%s\n' 'use_onepassword_file op://dev/connect/other-item secrets/connect.json' >"$PROJ/.envrc"
+direnv allow "$PROJ" >/dev/null # re-allow: direnv hashes .envrc content, this edit invalidated it
+reset_calls
+run "$PATH_WITH_OP"
+assert_eq "a DIFFERENT ref to the same dest re-fetches" "1" "$(op_calls)"
 
 new_project files-fail 'use_onepassword_file op://dev/connect/credentials.json secrets/connect.json'
 run "$PATH_WITH_OP" fail
@@ -406,6 +422,7 @@ reset_calls
 run "$PATH_WITH_OP"
 assert_contains "default output strips .tpl" "_authToken=s3cr3t" "$(cat "$PROJ/.npmrc" 2>/dev/null)"
 assert_eq "op invoked once" "1" "$(op_calls)"
+assert_contains "tracked in the cleanup manifest" "$PROJ/.npmrc" "$(cat "$PROJ/.direnv/op/.manifest" 2>/dev/null)"
 reset_calls
 run "$PATH_WITH_OP"
 assert_eq "unchanged template is a cache hit" "0" "$(op_calls)"
@@ -451,7 +468,41 @@ run "$PATH_WITH_OP"
 assert_eq "refuses to render to an ungitignored path" "" "$(ls_glob "$PROJ"/plain.out)"
 assert_contains "and says why" "NOT gitignored" "$STDERR"
 
-echo "══ 13. concurrency: parallel entries never source a half-written cache ══"
+echo "══ 13. op_cleanup wipes cache internals AND every tracked output ══"
+# op_cleanup is a real zsh file (home/direnv/zsh-hooks.zsh), sourced — not
+# this lib file, which is pure bash for direnv's own sourcing.
+OP_CLEANUP_SRC="$REPO_ROOT/home/direnv/zsh-hooks.zsh"
+if command -v zsh >/dev/null; then
+  zsh -n "$OP_CLEANUP_SRC" || {
+    echo "FATAL: $OP_CLEANUP_SRC fails zsh -n" >&2
+    exit 1
+  }
+  new_project cleanup 'use_onepassword
+use_onepassword_tpl .npmrc.tpl
+use_onepassword_file op://dev/connect/credentials.json secrets/connect.json'
+  printf '_authToken=op://dev/shared/npm-registry-token\n' >"$PROJ/.npmrc.tpl"
+  run "$PATH_WITH_OP"
+  assert_contains "fixture: env var loaded" "API_TOKEN=s3cr3t" "$STDOUT"
+  assert_contains "fixture: .npmrc rendered" "_authToken=s3cr3t" "$(cat "$PROJ/.npmrc" 2>/dev/null)"
+  assert_contains "fixture: secrets/connect.json materialized" "BEGIN FAKE KEY" "$(cat "$PROJ/secrets/connect.json" 2>/dev/null)"
+  assert_eq "fixture: manifest tracks both out-of-folder outputs" "2" "$(wc -l <"$PROJ/.direnv/op/.manifest" | tr -d ' ')"
+
+  CLEANUP_OUT="$(cd "$PROJ" && PATH="$PATH_WITH_OP" zsh -c "source \"$OP_CLEANUP_SRC\"; op_cleanup" 2>&1)"
+
+  assert_eq "op/ cache directory removed" "" "$(ls_glob "$PROJ"/.direnv/op)"
+  assert_eq ".npmrc removed too — only reachable via the manifest, not the op/ dir" "" "$(ls_glob "$PROJ"/.npmrc)"
+  assert_eq "secrets/connect.json removed too" "" "$(ls_glob "$PROJ"/secrets/connect.json)"
+  assert_contains "reports what it cleared" "cleared" "$CLEANUP_OUT"
+  assert_contains "reports the tracked-output count" "2 tracked output(s)" "$CLEANUP_OUT"
+
+  new_project cleanup-empty
+  CLEANUP_EMPTY_OUT="$(cd "$PROJ" && PATH="$PATH_WITH_OP" zsh -c "source \"$OP_CLEANUP_SRC\"; op_cleanup" 2>&1)"
+  assert_contains "nothing cached is reported, not an error" "nothing cached" "$CLEANUP_EMPTY_OUT"
+else
+  echo "zsh not on PATH — skipping op_cleanup tests" >&2
+fi
+
+echo "══ 14. concurrency: parallel entries never source a half-written cache ══"
 new_project concurrent
 reset_calls
 racer_pids=()

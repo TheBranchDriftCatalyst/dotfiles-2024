@@ -172,16 +172,28 @@ non-blocking in automation shells no matter which tier is live:
 
 Repos consume secrets by committing an `.env.tpl` of `op://` references and
 calling `use_onepassword` from `.envrc` — entering the repo materializes them
-as env vars (ESO-for-dev; naming: `op://dev/<repo-name>/<kebab-field>`). Each
-template's render is cached under `.direnv/op/` (0600, gitignored), keyed on
-the template's content hash — an edited `op://` ref busts the cache
-immediately regardless of mtime — and reused until `OP_ENV_CACHE_TTL_MINUTES`
-(default 8h) lapses, which catches a secret rotated behind an *unchanged*
-template; `op_cleanup` (zsh function, `home/direnv.nix`) clears it by hand.
+as env vars (ESO-for-dev; naming: `op://dev/<repo-name>/<kebab-field>`).
 `use_onepassword_tpl` is the same pattern for a whole config file with
 inline `op://` refs that takes no env var (an `.npmrc`, a kubeconfig);
 `use_onepassword_file` is for a single whole-file secret `op inject` cannot
-render at all (a Connect credential, a keypair) instead, by `op://ref`.
+render at all (a Connect credential, a keypair), by `op://ref` instead of a
+template.
+
+All three share one cache pattern, every artifact tracked under `.direnv/op/`
+(0600, gitignored) regardless of where it actually lands: a "watermark" —
+sha256 of the template's bytes, or of the `op://ref` string itself when
+there's no template — is stored at `.direnv/op/<key>.hash`, and a changed
+input busts it immediately, independent of mtime. `use_onepassword` layers a
+second check on top, `OP_ENV_CACHE_TTL_MINUTES` (default 8h): a hit needs
+both an unchanged watermark *and* a render younger than the TTL, which
+catches a secret rotated behind an *otherwise-unchanged* template.
+`use_onepassword_tpl`/`use_onepassword_file` have no TTL — the rendered file
+is the only copy, so there's nothing to silently rotate behind. Artifacts
+that live outside `.direnv/op/` (a rendered `.npmrc`, a materialized
+kubeconfig) get an extra line in `.direnv/op/.manifest`, which is what lets
+`op_cleanup` (zsh function, `home/direnv.nix`) remove them too, not just its
+own cache internals — run it after rotating anything, and everything a
+1Password helper wrote gets re-rendered fresh on the next shell.
 
 ## Status
 

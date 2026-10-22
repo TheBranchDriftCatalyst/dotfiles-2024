@@ -1,8 +1,11 @@
 # direnv — per-repo environments, plus the laptop half of the secrets story.
 #
-# Lives apart from zsh.nix because none of it is zsh: direnv evaluates .envrc
-# in bash, and its helper library is bash source that wants to be a real file
-# (IDE-highlighted, shellcheck'd, and testable) rather than a nix string.
+# Lives apart from zsh.nix because direnv itself isn't zsh: .envrc evaluates
+# in bash, and its helper library (./direnv/lib/onepassword.sh) wants to be a
+# real bash file — IDE-highlighted, shellcheck'd, testable — rather than a
+# nix string. The zsh-side conveniences (op_cleanup, the _direnv_hook noise
+# filter) are real files too, ./direnv/zsh-hooks.zsh, for the editor/zsh -n
+# half of that same contract even though shellcheck itself can't read zsh.
 { config, lib, ... }:
 
 let
@@ -53,50 +56,11 @@ in
   # colour codes prepended ahead of the repo file's own content.
   xdg.configFile."direnv/lib/onepassword.sh".text = livery + builtins.readFile ./direnv/lib/onepassword.sh;
 
+  # op_cleanup + the _direnv_hook noise filter: a real file
+  # (./direnv/zsh-hooks.zsh), not a nix string — shellcheck has no zsh
+  # dialect, but an editor and `zsh -n` can still read it directly, and it's
+  # free of nix's ''${...} interpolation-escaping noise.
   programs.zsh.initContent = lib.mkAfter ''
-    # Renders in .direnv/op/ are keyed on template content, so a secret
-    # rotated behind an unchanged template stays cached. This is the
-    # invalidation for that — run it after rotating anything.
-    op_cleanup() {
-      local dir="''${PWD}/.direnv/op"
-      if [[ ! -d "$dir" ]]; then
-        print -u2 "op_cleanup: nothing cached for this repo ($dir)"
-        return 0
-      fi
-      local -a cached=("$dir"/*(ND)) # D: the entries are .env.tpl, .npmrc.tpl…
-      rm -rf -- "$dir" || return 1
-      print -u2 "op_cleanup: cleared ''${#cached} file(s) from $dir"
-      # rendered outputs are left alone — the reload overwrites each from a
-      # fresh inject, so no tool ever finds its config file missing
-      [[ -f .envrc ]] && direnv reload
-    }
-
-    # `use flake` makes direnv announce ~120 changed nix vars on every cd,
-    # burying the lines that say something. 2.37 has no DIRENV_LOG_FILTER and
-    # DIRENV_LOG_FORMAT is all-or-nothing, so filter its stderr here.
-    if (( $+functions[_direnv_hook] )); then
-      functions[_direnv_hook_verbose]=$functions[_direnv_hook]
-      _direnv_hook() {
-        # This hook runs before prompt_starship_precmd, so its return value is
-        # what the prompt reads as the last command's status. direnv's own
-        # ends on `trap - SIGINT` and always hands over 0; pass the truth.
-        local __st=$?
-        local err="''${TMPDIR:-/tmp}/direnv-stderr.$$" line
-        # Redirection, not a pipe: the hook's job is to eval into THIS shell,
-        # and a pipeline would subshell it and lose the environment.
-        _direnv_hook_verbose 2>"$err"
-        # zsh read, not grep: our log lines carry em-dashes and arrows, which
-        # grep in a non-UTF-8 locale reports as "binary file matches" instead
-        # of printing. Also saves a fork per prompt.
-        if [[ -s "$err" ]]; then
-          while IFS= read -r line || [[ -n "$line" ]]; do
-            [[ "$line" == 'direnv: export '* ]] && continue
-            print -ru2 -- "$line"
-          done <"$err"
-        fi
-        rm -f -- "$err"
-        return $__st
-      }
-    fi
+    source ${./direnv/zsh-hooks.zsh}
   '';
 }
