@@ -30,10 +30,10 @@ op_cleanup() {
   done
   rm -rf -- "$dir" || return 1
   print -u2 "op_cleanup: cleared ${#cached} cache file(s) + $removed tracked output(s) from $dir"
-  # every tracked output (use_onepassword_tpl/_file's .npmrc, a
-  # materialized kubeconfig, …) is re-rendered fresh on the next entry —
-  # nothing cleaned here stays missing for long
-  [[ -f .envrc ]] && direnv reload
+  # No reload here, deliberately: direnv doesn't notice .direnv/op/ changing
+  # on its own (it only re-evaluates on cd, a watched-file change, or an
+  # explicit `direnv reload`/`direnv allow`), so a tracked output stays
+  # GONE — not re-rendered — until you trigger that yourself.
 }
 
 # `use flake` makes direnv announce ~120 changed nix vars on every cd,
