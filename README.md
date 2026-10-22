@@ -126,13 +126,62 @@ function from `home/direnv/lib/onepassword.sh`, installed into
    for fully non-interactive use (CI, servers).
 4. Verify: `op vault list`.
 
+**Non-interactive shells on macOS too** (not just Linux "headless"): the
+desktop-app biometric integration needs a human present to click Approve the
+first time a given process tree asks. An agent/automation tool that spawns
+its own shells (different process ancestry than your interactive
+Terminal/iTerm sessions) can hit `op`'s `authorization timeout` for exactly
+that reason even though the app integration is correctly configured and
+works fine interactively — `~/.config/op/config`'s `system_auth_latest_signin`
+also only binds biometric trust to ONE signed-in account at a time, so a
+second account on the same machine can fail the same way.
+
+`use_onepassword` (zsh.nix) tries three auth tiers, in order, to route around
+this — it only ever *reuses* credentials, never creates them, so it stays
+non-blocking in automation shells no matter which tier is live:
+
+1. **`OP_SERVICE_ACCOUNT_TOKEN`** — `op` auto-detects and prefers this over
+   any signed-in desktop account, so it never touches app integration at all.
+   **Business/Teams-tier only** — if the `dev` vault that `catalyst-cli` (and
+   other repos) read from lives under an *Individual* account, this tier is
+   simply unavailable there regardless of code; don't chase it as "the fix"
+   without first confirming the vault's account has Service Accounts in its
+   plan (https://developer.1password.com/docs/service-accounts/).
+2. **An existing `op signin` CLI session** — works on **any** plan tier.
+   Sign in once, interactively, in your own terminal:
+   `eval "$(op signin)"` (after `op account add --address <acct>.1password.com
+   --email <email>` if that account isn't already added for manual signin —
+   see "Headless flow" above). This exports `OP_SESSION_<shorthand>`, which
+   `use_onepassword` detects and reuses from then on; it is a session, not a
+   token — 1Password's own docs put the default inactivity timeout at ~30min,
+   so expect to re-run `op signin` periodically (once a day is a reasonable
+   habit), from your own interactive terminal, not from automation.
+   **Open question, verify before relying on it for the account that
+   currently has app integration turned on**: 1Password's docs say turning on
+   app integration requires turning it *off* again before `op account add`
+   will let you add an account for manual signin, and the docs are not fully
+   explicit about whether app integration and a manually-signed-in account
+   can then coexist afterward (used by different accounts, or even the same
+   one) — `kube.nix`, `catalyst.nix`, and `wakatime.nix` all currently depend
+   on today's desktop-app `op inject` working at `just switch` time, so test
+   on a throwaway account/vault first, or budget time to confirm nothing else
+   here regresses before flipping the toggle off project-wide.
+3. **Desktop-app "Integrate with CLI" biometric integration** — the original
+   flow above. Fine interactively; this is the one that times out in
+   automation shells, which tiers 1 and 2 exist to avoid.
+
 Repos consume secrets by committing an `.env.tpl` of `op://` references and
 calling `use_onepassword` from `.envrc` — entering the repo materializes them
-as env vars (ESO-for-dev; naming: `op://dev/<repo-name>/<kebab-field>`). The
-render is cached in `.direnv/op-env.cache` (0600, gitignored) so only the
-first shell per repo costs a biometric prompt; `OP_ENV_CACHE_TTL_MINUTES`
-tunes the 8h default, and `use_onepassword_file` is the same pattern for a
-whole-file secret (a Connect credential, a keypair, a kubeconfig).
+as env vars (ESO-for-dev; naming: `op://dev/<repo-name>/<kebab-field>`). Each
+template's render is cached under `.direnv/op/` (0600, gitignored), keyed on
+the template's content hash — an edited `op://` ref busts the cache
+immediately regardless of mtime — and reused until `OP_ENV_CACHE_TTL_MINUTES`
+(default 8h) lapses, which catches a secret rotated behind an *unchanged*
+template; `op_cleanup` (zsh function, `home/direnv.nix`) clears it by hand.
+`use_onepassword_tpl` is the same pattern for a whole config file with
+inline `op://` refs that takes no env var (an `.npmrc`, a kubeconfig);
+`use_onepassword_file` is for a single whole-file secret `op inject` cannot
+render at all (a Connect credential, a keypair) instead, by `op://ref`.
 
 ## Status
 

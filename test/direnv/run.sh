@@ -12,7 +12,9 @@
 #   ./test/direnv/run.sh [path/to/onepassword.sh]
 #
 # Defaults to the in-repo copy; pass ~/.config/direnv/lib/onepassword.sh to
-# test what home-manager actually installed.
+# test what home-manager actually installed. Run against the raw repo file
+# (not home-manager's rendered copy), $_OP_* colours are unset, so _op_say's
+# safe empty defaults keep every assertion below plain text.
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
 
@@ -87,7 +89,8 @@ PATH_WITH_OP="$ROOT/bin:$PATH"
 # tools a .envrc evaluation needs, and use that alone.
 mkdir -p "$ROOT/shim"
 for t in bash sh env direnv sed grep egrep mktemp mkdir chmod mv rm cat date wc \
-  head tail ls find tr cut sleep dirname basename touch uname awk stat cp ln test; do
+  head tail ls find tr cut sleep dirname basename touch uname awk stat cp ln test \
+  shasum git; do
   src="$(command -v "$t" 2>/dev/null)" && ln -sf "$src" "$ROOT/shim/$t"
 done
 PATH_WITHOUT_OP="$ROOT/shim"
@@ -137,7 +140,14 @@ op_calls() { # how many times the stub was invoked since the last reset
   echo "${n// /}"
 }
 reset_calls() { : >"$OP_CALL_LOG"; }
-cache_of() { echo "$PROJ/.direnv/op-env.cache"; }
+# Cache paths are per-template now: dir/<slug(tpl)>.env + .hash. slug() only
+# flattens slashes, so a bare ".env.tpl" slugs to itself.
+cache_of() { echo "$PROJ/.direnv/op/${1:-.env.tpl}.env"; }
+hash_of() { echo "$PROJ/.direnv/op/${1:-.env.tpl}.hash"; }
+# age_cache <tpl> — backdate a rendered cache's mtime well past any TTL this
+# suite uses, without a real sleep. `touch -t` is BSD/GNU-portable; `date -r`
+# (what _op_stale reads) is not, which is why this uses touch, not sed.
+age_cache() { touch -t 202001010000 "$(cache_of "${1:-.env.tpl}")"; }
 perms_of() { # stat(1) is BSD/GNU-divergent; ask ls and normalise
   # shellcheck disable=SC2012  # every path here is ours, all alphanumeric
   ls -l "$1" 2>/dev/null | cut -c1-10
@@ -156,10 +166,10 @@ run "$PATH_WITH_OP"
 assert_contains "API_TOKEN exported" "API_TOKEN=s3cr3t" "$STDOUT"
 assert_contains "non-secret line survives" "PLAIN=not-a-secret" "$STDOUT"
 assert_eq "op invoked exactly once" "1" "$(op_calls)"
-assert_contains "logs the render" "loaded 4 secret(s) from .env.tpl" "$STDERR"
+assert_contains "logs the render" "4 secret(s)" "$STDERR"
+assert_contains "names the auth tier" "biometric" "$STDERR"
 assert_eq "cache is 0600" "-rw-------" "$(perms_of "$(cache_of)")"
-assert_contains "cache carries a versioned header" "# op-env v1 keys=4 ts=" "$(head -1 "$(cache_of)")"
-assert_contains "header records the source template" "tpl=.env.tpl" "$(head -1 "$(cache_of)")"
+assert_eq "hash sidecar matches the template" "$(shasum -a 256 <"$PROJ/.env.tpl" | cut -d' ' -f1)" "$(cat "$(hash_of)")"
 assert_not_contains "cache holds no unrendered op:// refs" "op://" "$(cat "$(cache_of)")"
 
 echo "══ 2. warm cache — the whole point ══"
@@ -167,22 +177,22 @@ reset_calls
 run "$PATH_WITH_OP"
 assert_eq "op NOT invoked again" "0" "$(op_calls)"
 assert_contains "vars still exported" "API_TOKEN=s3cr3t" "$STDOUT"
-assert_contains "logs a cache hit" "from cache (no prompt)" "$STDERR"
+assert_contains "logs a cache hit" "cached" "$STDERR"
 
 echo "══ 3. idempotence: a cache hit rewrites nothing ══"
 before="$(cat "$(cache_of)")"
 run "$PATH_WITH_OP"
 assert_eq "cache byte-identical after re-entry" "$before" "$(cat "$(cache_of)")"
-assert_eq "only the cache lives in .direnv" "$(cache_of)" "$(ls_glob "$PROJ"/.direnv/op-env*)"
+assert_eq "exactly the .env + .hash pair live under .direnv/op" "2" "$(find "$PROJ/.direnv/op" -type f | wc -l | tr -d ' ')"
 
 echo "══ 4. template edit busts the cache ══"
 reset_calls
-sleep 1 # mtime granularity: -nt needs a strictly newer template
+# hash-keyed, not mtime-keyed: no sleep needed for an edit to register.
 echo 'EXTRA=op://dev/api/extra' >>"$PROJ/.env.tpl"
 run "$PATH_WITH_OP"
 assert_eq "op re-invoked" "1" "$(op_calls)"
 assert_contains "new key present" "EXTRA=s3cr3t" "$STDOUT"
-assert_contains "count updated" "loaded 5 secret(s)" "$STDERR"
+assert_contains "count updated" "5 secret(s)" "$STDERR"
 
 echo "══ 5. TTL ══"
 new_project ttl-zero 'export OP_ENV_CACHE_TTL_MINUTES=0
@@ -194,7 +204,7 @@ assert_eq "TTL=0 disables the cache (op each time)" "2" "$(op_calls)"
 
 new_project ttl-lapsed
 run "$PATH_WITH_OP"
-sed -i.bak '1s/ts=[0-9]*/ts=1/' "$(cache_of)" && rm -f "$(cache_of).bak" # age it past the TTL
+age_cache # same content, but the render is now "old"
 reset_calls
 run "$PATH_WITH_OP"
 assert_eq "expired cache re-renders" "1" "$(op_calls)"
@@ -212,49 +222,51 @@ assert_contains "missing op warns" "op CLI not on PATH" "$STDERR"
 assert_not_contains "and exports nothing" "API_TOKEN=" "$STDOUT"
 assert_contains "shell env is otherwise intact" "PATH=" "$STDOUT"
 
-# expire_cache — age the current project's cache past any TTL. The stale-cache
-# paths below are only reachable once the cache has lapsed; with a fresh one
-# the lib (correctly) never consults op at all.
-expire_cache() { sed -i.bak '1s/ts=[0-9]*/ts=1/' "$(cache_of)" && rm -f "$(cache_of).bak"; }
-
 new_project no-op-with-cache
 run "$PATH_WITH_OP"
-expire_cache
+age_cache
 run "$PATH_WITHOUT_OP"
 assert_contains "stale cache beats an empty env" "API_TOKEN=s3cr3t" "$STDOUT"
 assert_contains "and says so loudly" "using STALE cache (4 secret(s))" "$STDERR"
 
 new_project op-fails
 run "$PATH_WITH_OP"
-expire_cache
+age_cache
 run "$PATH_WITH_OP" fail
 assert_contains "locked vault falls back to cache" "API_TOKEN=s3cr3t" "$STDOUT"
-assert_contains "and surfaces op's own message" "authorization prompt dismissed" "$STDERR"
+assert_contains "and surfaces a classified reason, not op's raw text" "biometric approval never came back" "$STDERR"
 
 new_project op-fails-cold
 reset_calls
 run "$PATH_WITH_OP" fail
 assert_contains "cold failure is soft" "secrets NOT loaded" "$STDERR"
 assert_not_contains "nothing exported" "API_TOKEN=" "$STDOUT"
-assert_eq "no cache or debris written on failure" "" "$(ls_glob "$PROJ"/.direnv/op-env*)"
+assert_eq "no cache or debris written on failure" "" "$(ls_glob "$PROJ"/.direnv/op/*)"
 
 new_project no-template 'use_onepassword .env.missing'
 run "$PATH_WITH_OP"
-assert_contains "absent template warns and continues" "no .env.missing in" "$STDERR"
+assert_contains "absent template warns and continues" "no such template in" "$STDERR"
+assert_contains "names the template" ".env.missing" "$STDERR"
 assert_contains "shell survives" "PATH=" "$STDOUT"
 
-echo "══ 7. a foreign/corrupt cache is never sourced ══"
+echo "══ 7. a garbled hash sidecar forces a re-render ══"
+# Unlike a single-file cache with an embedded signature, the rendered .env
+# here carries no header of its own — tampering with ITS bytes while the
+# sidecar hash still matches the (unchanged) template is not something this
+# design detects (nothing but this library writes that file, 0600, under a
+# gitignored dir owned by the invoking user). What IS still guarded: the
+# sidecar hash itself being missing or garbled always forces a fresh render.
 new_project corrupt
 run "$PATH_WITH_OP"
-printf 'export PWNED=1\n' >"$(cache_of)"
+printf 'not-a-real-hash\n' >"$(hash_of)"
 reset_calls
 run "$PATH_WITH_OP"
-assert_eq "unrecognised header forces a re-render" "1" "$(op_calls)"
-assert_not_contains "payload never evaluated" "PWNED=1" "$STDOUT"
+assert_eq "garbled hash forces a re-render" "1" "$(op_calls)"
+assert_eq "and the correct hash is restored" "$(shasum -a 256 <"$PROJ/.env.tpl" | cut -d' ' -f1)" "$(cat "$(hash_of)")"
 
-echo "══ 7b. one cache file, two templates ══"
-# Both calls resolve to the same <layout>/op-env.cache. Without the tpl= guard
-# the second silently inherits the first one's environment.
+echo "══ 7b. two templates cache independently ══"
+# Each template gets its own <slug>.env/.hash pair, so entering a project
+# that uses both never busts one by rendering the other.
 new_project two-templates 'use_onepassword .env.a
 use_onepassword .env.b'
 printf 'FROM_A=op://dev/a/x\n' >"$PROJ/.env.a"
@@ -264,6 +276,10 @@ run "$PATH_WITH_OP"
 assert_contains "first template's key present" "FROM_A=s3cr3t" "$STDOUT"
 assert_contains "second template's key present" "FROM_B=s3cr3t" "$STDOUT"
 assert_eq "each template rendered on its own" "2" "$(op_calls)"
+assert_eq "both cache pairs exist independently" "4" "$(find "$PROJ/.direnv/op" -type f | wc -l | tr -d ' ')"
+reset_calls
+run "$PATH_WITH_OP"
+assert_eq "and both stay warm on re-entry" "0" "$(op_calls)"
 
 echo "══ 8. value fidelity through the dotenv round-trip ══"
 new_project quoting
@@ -274,7 +290,6 @@ DOLLAR='$HOME-literal'
 EQUALS=a=b=c
 HASHY="trailing # not a comment"
 TPL
-sleep 1
 run "$PATH_WITH_OP"
 assert_contains "spaces survive" "SPACED=hello world" "$STDOUT"
 assert_contains "apostrophes survive" "APOSTROPHE=it's fine" "$STDOUT"
@@ -286,14 +301,24 @@ run "$PATH_WITH_OP"
 assert_contains "and identically from cache" "APOSTROPHE=it's fine" "$STDOUT"
 
 # dotenv rejects a bare value containing spaces. The lib must report that as a
-# render failure rather than eval'ing direnv's error text.
+# render failure (and leave no cache) rather than eval'ing a half-parsed file.
 new_project unparseable
 printf 'BROKEN=no quotes here\n' >"$PROJ/.env.tpl"
-sleep 1
 run "$PATH_WITH_OP"
 assert_contains "an unparseable render fails soft" "parse of rendered .env.tpl failed" "$STDERR"
-assert_eq "and writes no cache" "" "$(ls_glob "$PROJ"/.direnv/op-env*)"
+assert_eq "and writes no cache" "" "$(ls_glob "$PROJ"/.direnv/op/*)"
 assert_contains "shell survives" "PATH=" "$STDOUT"
+
+# A template edit that fails to parse must not clobber a previously-good
+# render — the staged-then-renamed write is what this proves.
+new_project edit-then-break
+run "$PATH_WITH_OP"
+printf 'BROKEN=no quotes here\n' >>"$PROJ/.env.tpl"
+reset_calls
+run "$PATH_WITH_OP"
+assert_contains "the bad edit is reported" "parse of rendered .env.tpl failed" "$STDERR"
+assert_contains "but the prior good cache still answers" "API_TOKEN=s3cr3t" "$STDOUT"
+assert_contains "flagged as stale, not silently reused" "using STALE cache" "$STDERR"
 
 echo "══ 9. strict_env (errexit/nounset/pipefail) ══"
 new_project strict 'strict_env
@@ -302,7 +327,7 @@ run "$PATH_WITH_OP"
 assert_contains "renders under strict_env" "API_TOKEN=s3cr3t" "$STDOUT"
 run "$PATH_WITH_OP"
 assert_contains "cache hit under strict_env" "API_TOKEN=s3cr3t" "$STDOUT"
-expire_cache
+age_cache
 run "$PATH_WITHOUT_OP"
 assert_contains "stale path under strict_env" "API_TOKEN=s3cr3t" "$STDOUT"
 assert_contains "and logs the staleness" "using STALE cache" "$STDERR"
@@ -316,17 +341,17 @@ assert_contains "shell survives" "PATH=" "$STDOUT"
 new_project strict-missing-tpl 'strict_env
 use_onepassword .env.missing'
 run "$PATH_WITH_OP"
-assert_contains "missing template under strict_env" "no .env.missing in" "$STDERR"
+assert_contains "missing template under strict_env" "no such template in" "$STDERR"
 assert_contains "shell survives" "PATH=" "$STDOUT"
 
 echo "══ 10. direnv_layout_dir override is honoured ══"
 new_project layout "export direnv_layout_dir=\"$ROOT/layout-elsewhere\"
 use_onepassword"
 run "$PATH_WITH_OP"
-assert_eq "cache follows the layout dir" "-rw-------" "$(perms_of "$ROOT/layout-elsewhere/op-env.cache")"
-assert_eq "and not .direnv/" "" "$(ls_glob "$PROJ"/.direnv/op-env*)"
+assert_eq "cache follows the layout dir" "-rw-------" "$(perms_of "$ROOT/layout-elsewhere/op/.env.tpl.env")"
+assert_eq "and not .direnv/" "" "$(ls_glob "$PROJ"/.direnv/op/*)"
 
-echo "══ 11. use_onepassword_file ══"
+echo "══ 11. use_onepassword_file (op://ref → single file, via op read) ══"
 new_project files 'use_onepassword_file op://dev/connect/credentials.json secrets/connect.json'
 reset_calls
 run "$PATH_WITH_OP"
@@ -368,7 +393,65 @@ run "$PATH_WITHOUT_OP"
 assert_contains "missing op warns" "op CLI not on PATH" "$STDERR"
 assert_contains "shell survives" "PATH=" "$STDOUT"
 
-echo "══ 12. concurrency: parallel entries never source a half-written cache ══"
+new_project files-not-gitignored 'use_onepassword_file op://dev/connect/credentials.json plain/connect.json'
+(cd "$PROJ" && git init -q)
+run "$PATH_WITH_OP"
+assert_eq "refuses to write where git check-ignore disagrees" "" "$(ls_glob "$PROJ"/plain/connect.json)"
+assert_contains "and says why" "NOT gitignored" "$STDERR"
+
+echo "══ 12. use_onepassword_tpl (whole template → file, via op inject) ══"
+new_project tpl 'use_onepassword_tpl .npmrc.tpl'
+printf '_authToken=op://dev/shared/npm-registry-token\n' >"$PROJ/.npmrc.tpl"
+reset_calls
+run "$PATH_WITH_OP"
+assert_contains "default output strips .tpl" "_authToken=s3cr3t" "$(cat "$PROJ/.npmrc" 2>/dev/null)"
+assert_eq "op invoked once" "1" "$(op_calls)"
+reset_calls
+run "$PATH_WITH_OP"
+assert_eq "unchanged template is a cache hit" "0" "$(op_calls)"
+assert_contains "and says so" "current" "$STDERR"
+
+echo 'EXTRA=op://dev/shared/extra' >>"$PROJ/.npmrc.tpl"
+reset_calls
+run "$PATH_WITH_OP"
+assert_eq "edited template re-renders" "1" "$(op_calls)"
+assert_contains "new ref present" "EXTRA=s3cr3t" "$(cat "$PROJ/.npmrc")"
+
+# shellcheck disable=SC2016  # $PWD expands in the WRITTEN .envrc's own bash, not here
+new_project tpl-explicit-out 'use_onepassword_tpl kubeconfig.tpl "$PWD/.secrets/kubeconfig" 600'
+printf 'token=op://dev/cluster/token\n' >"$PROJ/kubeconfig.tpl"
+run "$PATH_WITH_OP"
+assert_contains "explicit output path honoured" "token=s3cr3t" "$(cat "$PROJ/.secrets/kubeconfig" 2>/dev/null)"
+assert_eq "output is 0600" "-rw-------" "$(perms_of "$PROJ/.secrets/kubeconfig")"
+
+new_project tpl-no-suffix 'use_onepassword_tpl plain.conf'
+printf 'x=op://dev/a/x\n' >"$PROJ/plain.conf"
+run "$PATH_WITH_OP"
+assert_contains "no .tpl suffix without an explicit output is a usage error" "pass an explicit output path" "$STDERR"
+
+new_project tpl-fails 'use_onepassword_tpl .npmrc.tpl'
+printf '_authToken=op://dev/shared/npm-registry-token\n' >"$PROJ/.npmrc.tpl"
+run "$PATH_WITH_OP"
+# force a re-render attempt even though the template is unchanged
+echo '# comment, same refs' >>"$PROJ/.npmrc.tpl"
+run "$PATH_WITH_OP" fail
+assert_contains "render failure keeps the existing file" "_authToken=s3cr3t" "$(cat "$PROJ/.npmrc")"
+assert_contains "and says it's now stale" "kept, now stale" "$STDERR"
+
+new_project tpl-fails-cold 'use_onepassword_tpl .npmrc.tpl'
+printf '_authToken=op://dev/shared/npm-registry-token\n' >"$PROJ/.npmrc.tpl"
+run "$PATH_WITH_OP" fail
+assert_contains "cold failure is soft" "NOT rendered" "$STDERR"
+assert_eq "nothing written" "" "$(ls_glob "$PROJ"/.npmrc)"
+
+new_project tpl-not-gitignored 'use_onepassword_tpl .npmrc.tpl plain.out'
+printf '_authToken=op://dev/shared/npm-registry-token\n' >"$PROJ/.npmrc.tpl"
+(cd "$PROJ" && git init -q)
+run "$PATH_WITH_OP"
+assert_eq "refuses to render to an ungitignored path" "" "$(ls_glob "$PROJ"/plain.out)"
+assert_contains "and says why" "NOT gitignored" "$STDERR"
+
+echo "══ 13. concurrency: parallel entries never source a half-written cache ══"
 new_project concurrent
 reset_calls
 racer_pids=()
@@ -380,7 +463,7 @@ done
 racers_failed=0
 for pid in "${racer_pids[@]}"; do wait "$pid" || racers_failed=$((racers_failed + 1)); done
 assert_eq "5 concurrent evaluations all resolved API_TOKEN" "0" "$racers_failed"
-assert_eq "exactly one op-env artifact remains" "$(cache_of)" "$(ls_glob "$PROJ"/.direnv/op-env*)"
+assert_eq "exactly one .env/.hash pair remains" "$(cache_of) $(hash_of)" "$(ls_glob "$(cache_of)" "$(hash_of)")"
 
 echo
 if [[ $fails -eq 0 ]]; then
