@@ -29,6 +29,7 @@ set -euo pipefail
 # Overridable so the behaviour can be exercised against fixtures instead of the
 # live config — this script's whole job is preventing data loss, so it has to be
 # testable without risking the thing it protects.
+# TODO: hate this fuckign file lets remove it withotu regressing back to the issue? 
 LIVE="${CLAUDE_SETTINGS_LIVE:-$HOME/.claude/settings.json}"
 REPO_FILE="${CLAUDE_SETTINGS_REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/dotfiles/claude/settings.json}"
 

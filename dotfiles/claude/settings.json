@@ -1,4 +1,8 @@
 {
+  "env": {
+    "ECC_OBSERVER_TIMEOUT_SECONDS": "300",
+    "ECC_OBSERVER_MAX_ANALYSIS_LINES": "250"
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -68,6 +72,14 @@
       }
     }
   },
+  "pluginConfigs": {
+    "ecc@ecc": {
+      "options": {
+        "hooks_enabled": true,
+        "hook_profile": "standard"
+      }
+    }
+  },
   "tui": "fullscreen",
   "skipWorkflowUsageWarning": true,
   "theme": "dark",
@@ -115,18 +127,5 @@
     "includeCoAuthoredBy": false,
     "includeSessionTrailer": false
   },
-  "includeCoAuthoredBy": false,
-  "effortLevel": "high",
-  "pluginConfigs": {
-    "ecc@ecc": {
-      "options": {
-        "hooks_enabled": true,
-        "hook_profile": "standard"
-      }
-    }
-  },
-  "env": {
-    "ECC_OBSERVER_TIMEOUT_SECONDS": "300",
-    "ECC_OBSERVER_MAX_ANALYSIS_LINES": "250"
-  }
+  "effortLevel": "high"
 }
